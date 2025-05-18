@@ -1,0 +1,16 @@
+/server
+│
+├── db/
+│   ├── index.js          ← Connect to PostgreSQL
+│   └── schema.sql        ← SQL schema to create tables
+│
+├── routes/
+│   └── match.js          ← Routes to create/fetch matches
+│
+├── controllers/
+│   └── matchController.js ← Business logic
+│
+├── utils/
+│   └── uuid.js           ← UUID generator (if needed)
+│
+└── server.js             ← Entry point

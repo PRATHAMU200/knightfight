@@ -1,0 +1,33 @@
+```
+chess-website/
+├── app/
+│   ├── api/
+│   │   ├── socket/
+│   │   │   └── route.js     # Socket.io API route
+│   │   ├── matches/
+│   │   │   └── route.js     # API for match creation/info
+│   ├── match/
+│   │   └── [id]/
+│   │       └── page.js      # Match page
+│   ├── page.js              # Home page
+│   ├── layout.js            # Root layout
+│   └── globals.css          # Global styles
+├── components/
+│   ├── ui/                  # Reusable UI components
+│   ├── ChessBoard.jsx       # Chess board component
+│   ├── ChatBox.jsx          # Chat functionality
+│   ├── MoveHistory.jsx      # Move history display
+│   ├── CreateMatch.jsx      # Match creation form
+│   └── ShareLink.jsx        # Link sharing component
+├── lib/
+│   ├── socket.js            # Socket.io client setup
+│   ├── chess.js             # Chess game logic
+│   └── utils.js             # Utility functions
+├── public/
+│   ├── images/
+│   └── favicon.ico
+├── .env.local               # Environment variables
+├── package.json
+├── tailwind.config.js
+└── next.config.js
+```
