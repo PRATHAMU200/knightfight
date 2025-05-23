@@ -109,7 +109,7 @@ export default function Home() {
           <div className="space-x-2 flex justify-center ">
             <button
               onClick={() =>
-                startGame({ timeControl: "regular", timeLimit: 5 })
+                startGame({ timeControl: "regular", time_limit: 1 })
               }
               className="border border-gray-600 text-gray-300 px-3 py-1 rounded w-full"
             >
@@ -117,7 +117,7 @@ export default function Home() {
             </button>
             <button
               onClick={() =>
-                startGame({ timeControl: "regular", timeLimit: 10 })
+                startGame({ timeControl: "regular", time_limit: 10 })
               }
               className="border border-gray-600 text-gray-300 px-3 py-1 rounded w-full"
             >
@@ -126,7 +126,7 @@ export default function Home() {
             <button
               className="border border-gray-600 text-gray-300 px-3 py-1 rounded w-full"
               onClick={() =>
-                startGame({ timeControl: "regular", timeLimit: 15 })
+                startGame({ timeControl: "regular", time_limit: 15 })
               }
             >
               15 Min

@@ -19,6 +19,9 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
   const [drawOfferingPlayer, setDrawOfferingPlayer] = useState(null);
   const [userRole, setUserRole] = useState("player");
   const [spectatorsOnline, setSpectatorsOnline] = useState(0);
+  const [whiteTime, setWhiteTime] = useState(null);
+  const [blackTime, setBlackTime] = useState(null);
+  const [gameInfo, setGameInfo] = useState(null);
 
   useEffect(() => {
     if (!gameId) return;
@@ -71,7 +74,7 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
 
     socketManager.on(
       "opponentMove",
-      ({ fen: newFen, move }) => {
+      ({ fen: newFen, move, currentTurn }) => {
         chess.current.load(newFen);
         setFen(newFen);
         setMoves((prev) => [...prev, move]);
@@ -138,6 +141,56 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
     };
   }, [gameId, forcedColor]);
 
+  useEffect(() => {
+    const fetchGameInfo = async () => {
+      if (!gameId) return;
+
+      try {
+        const response = await fetch(
+          `http://localhost:3001/game/${gameId}/status`
+        );
+        const data = await response.json();
+        setGameInfo(data);
+
+        if (data.time_limit && data.time_limit > 0) {
+          const timeInSeconds = data.time_limit * 60;
+          setWhiteTime(timeInSeconds);
+          setBlackTime(timeInSeconds);
+        }
+      } catch (error) {
+        console.error("Error fetching game info:", error);
+      }
+    };
+
+    fetchGameInfo();
+  }, [gameId]);
+
+  useEffect(() => {
+    if (!whiteTime || !blackTime || gameEnded || !gameInfo?.time_limit) return;
+
+    const timer = setInterval(() => {
+      if (turn === "w") {
+        setWhiteTime((prev) => {
+          if (prev <= 1) {
+            socketManager.emit("timeUp", { gameId, loser: "white" });
+            return 0;
+          }
+          return prev - 1;
+        });
+      } else {
+        setBlackTime((prev) => {
+          if (prev <= 1) {
+            socketManager.emit("timeUp", { gameId, loser: "black" });
+            return 0;
+          }
+          return prev - 1;
+        });
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [turn, whiteTime, blackTime, gameEnded, gameId, gameInfo]);
+
   function onDrop(sourceSquare, targetSquare) {
     if (userRole === "spectator") {
       alert("Spectators cannot make moves!");
@@ -197,7 +250,8 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
       move.san,
       newFen,
       isCheckmate || isStalemate,
-      winner
+      winner,
+      chess.current.turn()
     );
 
     return true;

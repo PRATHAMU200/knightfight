@@ -8,14 +8,15 @@ import Chat from "@/components/chat";
 import ChessBoard from "@/components/chessboard";
 import socketManager from "@/components/utils/socketManager";
 
-function PlayerCard({ player, color, isOnline = false }) {
+function PlayerCard({ player, color, isOnline = false, timeLeft }) {
   // Update player cards to show time:
   const formatTime = (seconds) => {
-    if (!seconds) return "∞";
+    if (seconds == null && seconds === undefined) return "∞";
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
+
   return (
     <div className="bg-[#121212] border border-gray-700 rounded-xl p-4 mb-4">
       <h3 className="text-white font-semibold mb-2 flex items-center">
@@ -34,7 +35,9 @@ function PlayerCard({ player, color, isOnline = false }) {
         <div>
           <p className="font-semibold text-white">{player.name}</p>
           <p className="text-gray-400 text-sm">Rating: {player.rating}</p>
-          <p className="text-gray-400 text-sm">Time left: {player.timeLeft}</p>
+          <p className="text-gray-400 text-sm">
+            Time left: {formatTime(timeLeft)}
+          </p>
         </div>
       </div>
     </div>
@@ -74,7 +77,9 @@ export default function GamePage() {
 
   const [showShareDropdown, setShowShareDropdown] = useState(false);
   const [isSpectator, setIsSpectator] = useState(false);
-
+  // useEffect(() => {
+  //   console.log("Timer values updated:", { whiteTime, blackTime });
+  // }, [whiteTime, blackTime]);
   useEffect(() => {
     const spectatorMode = searchParams.get("choice") === "spectator";
     setIsSpectator(spectatorMode);
@@ -104,10 +109,14 @@ export default function GamePage() {
 
     socketManager.on(
       "loadMoves",
-      (moveHistory) => {
+      (moveHistory, gameState) => {
         if (moveHistory && moveHistory.length > 0) {
           const moveList = moveHistory.map((m) => m.move);
           setMoves(moveList);
+        }
+        // Set game ended state if winner exists
+        if (gameState && gameState.winner) {
+          setGameEnded(true);
         }
       },
       "gamePageLoadMoves"
@@ -128,6 +137,7 @@ export default function GamePage() {
       socketManager.off("opponentMove");
     };
   }, [gameId]);
+
   useEffect(() => {
     const checkGameStatus = async () => {
       try {
@@ -148,13 +158,6 @@ export default function GamePage() {
     }
   }, [gameId]);
 
-  // Update player cards to show time:
-  const formatTime = (seconds) => {
-    if (!seconds) return "∞";
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
   const generateGuestId = () => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     let result = "Guest";
@@ -163,24 +166,17 @@ export default function GamePage() {
     }
     return result;
   };
-  // Dummy player and game info data
+
+  // Create player objects without timeLeft (we'll pass it separately)
   const blackPlayer = {
-    name: assignedColor === "white" ? "You (White)" : `Guest (White)`,
-    //   assignedColor === "black"
-    //     ? "You (Black)"
-    //     : `${generateGuestId()} (Black)`,
+    name: assignedColor === "black" ? "You (Black)" : `Guest (Black)`,
     rating: 1400,
-    timeLeft: 12, //formatTime(blackTime),
     avatar: "B",
   };
 
   const whitePlayer = {
     name: assignedColor === "white" ? "You (White)" : `Guest (White)`,
-    //   assignedColor === "white"
-    //     ? "You (White)"
-    //     : `${generateGuestId()} (White)`,
     rating: 1450,
-    timeLeft: 11, // formatTime(whiteTime),
     avatar: "W",
   };
 
@@ -219,11 +215,11 @@ export default function GamePage() {
           otherDetails: "Online Match",
         });
 
-        if (data.time_limit) {
-          const timeInSeconds = data.time_limit * 60;
-          setWhiteTime(timeInSeconds);
-          setBlackTime(timeInSeconds);
-        }
+        // if (data.time_limit) {
+        //   const timeInSeconds = data.time_limit * 60;
+        //   setWhiteTime(timeInSeconds);
+        //   setBlackTime(timeInSeconds);
+        // }
       } catch (error) {
         console.error("Error fetching game info:", error);
       }
@@ -234,34 +230,38 @@ export default function GamePage() {
     }
   }, [gameId]);
 
-  // Add timer countdown useEffect:
-  //   useEffect(() => {
-  //     if (!whiteTime || !blackTime || gameEnded) return;
+  useEffect(() => {
+    const handleTimerUpdate = ({ whiteTime, blackTime, currentTurn }) => {
+      // console.log("Timer update received:", {
+      //   whiteTime,
+      //   blackTime,
+      //   currentTurn,
+      // });
+      setWhiteTime(whiteTime);
+      setBlackTime(blackTime);
+      setCurrentTurn(currentTurn);
+    };
 
-  //     const timer = setInterval(() => {
-  //       if (currentTurn === "white") {
-  //         setWhiteTime((prev) => {
-  //           if (prev <= 1) {
-  //             // White time up
-  //             socketManager.emit("timeUp", { gameId, loser: "white" });
-  //             return 0;
-  //           }
-  //           return prev - 1;
-  //         });
-  //       } else {
-  //         setBlackTime((prev) => {
-  //           if (prev <= 1) {
-  //             // Black time up
-  //             socketManager.emit("timeUp", { gameId, loser: "black" });
-  //             return 0;
-  //           }
-  //           return prev - 1;
-  //         });
-  //       }
-  //     }, 1000);
+    socketManager.on("timerUpdate", handleTimerUpdate, "gamePageTimerUpdate");
 
-  //     return () => clearInterval(timer);
-  //   }, [currentTurn, whiteTime, blackTime, gameEnded, gameId]);
+    return () => {
+      socketManager.off("timerUpdate");
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleGameEnded = ({ winner, reason }) => {
+      console.log("Game ended:", winner, reason);
+      setGameEnded(true);
+      // Stop any local timers since game is over
+    };
+
+    socketManager.on("gameEnded", handleGameEnded, "gamePageGameEnded");
+
+    return () => {
+      socketManager.off("gameEnded");
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-black text-white p-6 flex flex-col space-y-6">
@@ -330,6 +330,7 @@ export default function GamePage() {
           <PlayerCard
             player={blackPlayer}
             color="Black"
+            timeLeft={blackTime}
             isOnline={
               playersOnline > 0 &&
               (assignedColor === "black" || playersOnline === 2)
@@ -338,6 +339,7 @@ export default function GamePage() {
           <PlayerCard
             player={whitePlayer}
             color="White"
+            timeLeft={whiteTime}
             isOnline={
               playersOnline > 0 &&
               (assignedColor === "white" || playersOnline === 2)

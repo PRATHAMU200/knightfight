@@ -118,14 +118,29 @@ class SocketManager {
   }
 
   // Chess-specific methods
-  makeMove(gameId, move, fen, isGameEnd = false, winner = null) {
+  makeMove(gameId, move, fen, isGameEnd = false, winner = null, currentTurn) {
     this.emit("moveMade", {
       gameId,
       move,
       fen,
       isCheckmate: isGameEnd && winner !== "draw",
       winner,
+      currentTurn,
     });
+  }
+
+  // Add timer-specific methods
+  onTimerUpdate(callback, key = "timerUpdate") {
+    this.on("timerUpdate", callback, key);
+  }
+
+  onGameEnded(callback, key = "gameEnded") {
+    this.on("gameEnded", callback, key);
+  }
+
+  // Method to handle time up (if needed for client-side validation)
+  timeUp(gameId, loser) {
+    this.emit("timeUp", { gameId, loser });
   }
 
   sendChatMessage(gameId, user, text) {

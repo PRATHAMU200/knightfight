@@ -41,6 +41,14 @@ const pool = new Pool({
 
 // Track game rooms and players
 const gameRooms = new Map(); // gameId -> { players: Set, playerColors: Map }
+// gameId -> {
+// players: Set,
+// playerColors: Map,
+// spectators: Set,
+// timers: { white: number, black: number },
+// currentTurn: 'white' | 'black',
+// timerInterval: NodeJS.Timeout,
+// gameStarted: boolean
 
 // Initialize table if it doesn't exist
 const initDb = async () => {
@@ -227,6 +235,37 @@ io.on("connection", (socket) => {
         gameRoom.playerColors.set(socket.id, color);
         socket.emit("assignColor", color);
       }
+      // Initialize timers when second player joins
+      if (gameRoom.players.size === 2 && !gameRoom.gameStarted) {
+        try {
+          const gameResult = await pool.query(
+            "SELECT time_limit FROM games WHERE game_id = $1",
+            [gameId]
+          );
+
+          if (gameResult.rows.length > 0) {
+            const timeLimit = gameResult.rows[0].time_limit;
+            if (timeLimit) {
+              const timeInSeconds = timeLimit * 60;
+              gameRoom.timers = { white: timeInSeconds, black: timeInSeconds };
+              gameRoom.currentTurn = "white";
+              gameRoom.gameStarted = true;
+
+              // Start the timer
+              startGameTimer(gameId);
+
+              // Broadcast initial timer state
+              io.to(gameId).emit("timerUpdate", {
+                whiteTime: timeInSeconds,
+                blackTime: timeInSeconds,
+                currentTurn: "white",
+              });
+            }
+          }
+        } catch (error) {
+          console.error("Error initializing timers:", error);
+        }
+      }
 
       console.log(
         `Player ${
@@ -273,6 +312,19 @@ io.on("connection", (socket) => {
       spectators: spectatorsInRoom,
     });
   });
+  //timer and timeup for the players games
+  socket.on("timeUp", async ({ gameId, loser }) => {
+    try {
+      const winner = loser === "white" ? "black" : "white";
+      await pool.query("UPDATE games SET winner = $1 WHERE game_id = $2", [
+        winner,
+        gameId,
+      ]);
+      io.to(gameId).emit("gameEnded", { winner, reason: "timeout" });
+    } catch (error) {
+      console.error("Error updating game result:", error);
+    }
+  });
 
   //Add draw offer socket event (add this after the existing socket events)
   socket.on("offerDraw", async ({ gameId, offeringPlayer }) => {
@@ -283,6 +335,7 @@ io.on("connection", (socket) => {
   socket.on("respondToDraw", async ({ gameId, accepted }) => {
     if (accepted) {
       try {
+        stopGameTimer(gameId);
         await pool.query("UPDATE games SET winner = $1 WHERE game_id = $2", [
           "draw",
           gameId,
@@ -298,39 +351,43 @@ io.on("connection", (socket) => {
   });
 
   //Making moves
-  socket.on("moveMade", async ({ gameId, move, fen, isCheckmate, winner }) => {
-    try {
-      // Fetch and parse existing history
-      const gameResult = await pool.query(
-        "SELECT move_history FROM games WHERE game_id = $1",
-        [gameId]
-      );
-
-      if (gameResult.rows.length > 0) {
-        const moveHistory = gameResult.rows[0].move_history || [];
-        moveHistory.push({ move, fen });
-
-        await pool.query(
-          "UPDATE games SET move_history = $1 WHERE game_id = $2",
-          [JSON.stringify(moveHistory), gameId]
+  socket.on(
+    "moveMade",
+    async ({ gameId, move, fen, isCheckmate, winner, currentTurn }) => {
+      try {
+        // Fetch and parse existing history
+        const gameResult = await pool.query(
+          "SELECT move_history FROM games WHERE game_id = $1",
+          [gameId]
         );
-      }
 
-      // Check if game ended due to checkmate
-      if (isCheckmate && winner) {
-        await pool.query("UPDATE games SET winner = $1 WHERE game_id = $2", [
-          winner,
-          gameId,
-        ]);
-        io.to(gameId).emit("gameEnded", { winner, reason: "checkmate" });
-      } else {
-        // Broadcast move to other players in the room
-        socket.to(gameId).emit("opponentMove", { move, fen });
+        if (gameResult.rows.length > 0) {
+          const moveHistory = gameResult.rows[0].move_history || [];
+          moveHistory.push({ move, fen });
+
+          await pool.query(
+            "UPDATE games SET move_history = $1 WHERE game_id = $2",
+            [JSON.stringify(moveHistory), gameId]
+          );
+        }
+        // Switch turn for timer
+        switchTurn(gameId);
+        // Check if game ended due to checkmate
+        if (isCheckmate && winner) {
+          await pool.query("UPDATE games SET winner = $1 WHERE game_id = $2", [
+            winner,
+            gameId,
+          ]);
+          io.to(gameId).emit("gameEnded", { winner, reason: "checkmate" });
+        } else {
+          // Broadcast move to other players in the room
+          socket.to(gameId).emit("opponentMove", { move, fen });
+        }
+      } catch (error) {
+        console.error("Error saving move:", error);
       }
-    } catch (error) {
-      console.error("Error saving move:", error);
     }
-  });
+  );
 
   socket.on("chatMessage", async ({ gameId, user, text }) => {
     try {
@@ -347,6 +404,7 @@ io.on("connection", (socket) => {
 
   socket.on("drawGame", async ({ gameId }) => {
     try {
+      stopGameTimer(gameId);
       await pool.query("UPDATE games SET winner = $1 WHERE game_id = $2", [
         "draw",
         gameId,
@@ -359,6 +417,7 @@ io.on("connection", (socket) => {
 
   socket.on("surrenderGame", async ({ gameId, loser }) => {
     try {
+      stopGameTimer(gameId);
       const winner = loser === "white" ? "black" : "white";
       await pool.query("UPDATE games SET winner = $1 WHERE game_id = $2", [
         winner,
@@ -392,6 +451,10 @@ io.on("connection", (socket) => {
         room.players.delete(socket.id);
         room.playerColors.delete(socket.id);
       }
+      // Stop timer if no players left
+      if (room.players.size === 0) {
+        stopGameTimer(gameId);
+      }
 
       if (room.spectators.has(socket.id)) {
         room.spectators.delete(socket.id);
@@ -406,6 +469,67 @@ io.on("connection", (socket) => {
     });
   });
 });
+
+function startGameTimer(gameId) {
+  const gameRoom = gameRooms.get(gameId);
+  if (!gameRoom || gameRoom.timerInterval) return;
+
+  gameRoom.timerInterval = setInterval(() => {
+    if (!gameRoom.timers || !gameRoom.gameStarted) return;
+
+    const currentPlayer = gameRoom.currentTurn;
+    if (gameRoom.timers[currentPlayer] > 0) {
+      gameRoom.timers[currentPlayer]--;
+
+      // Broadcast timer update
+      io.to(gameId).emit("timerUpdate", {
+        whiteTime: gameRoom.timers.white,
+        blackTime: gameRoom.timers.black,
+        currentTurn: gameRoom.currentTurn,
+      });
+
+      // Check if time ran out
+      if (gameRoom.timers[currentPlayer] <= 0) {
+        clearInterval(gameRoom.timerInterval);
+        const winner = currentPlayer === "white" ? "black" : "white";
+
+        // Update database
+        pool
+          .query("UPDATE games SET winner = $1 WHERE game_id = $2", [
+            winner,
+            gameId,
+          ])
+          .then(() => {
+            io.to(gameId).emit("gameEnded", { winner, reason: "timeout" });
+          })
+          .catch((error) =>
+            console.error("Error updating game result:", error)
+          );
+      }
+    }
+  }, 1000);
+}
+
+function stopGameTimer(gameId) {
+  const gameRoom = gameRooms.get(gameId);
+  if (gameRoom && gameRoom.timerInterval) {
+    clearInterval(gameRoom.timerInterval);
+    gameRoom.timerInterval = null;
+  }
+}
+
+function switchTurn(gameId) {
+  const gameRoom = gameRooms.get(gameId);
+  if (gameRoom && gameRoom.timers) {
+    gameRoom.currentTurn = gameRoom.currentTurn === "white" ? "black" : "white";
+
+    io.to(gameId).emit("timerUpdate", {
+      whiteTime: gameRoom.timers.white,
+      blackTime: gameRoom.timers.black,
+      currentTurn: gameRoom.currentTurn,
+    });
+  }
+}
 
 //At last server start
 server.listen(port, () => {
