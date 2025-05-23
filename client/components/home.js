@@ -16,9 +16,35 @@ import { v4 as uuidv4 } from "uuid";
 export default function Home() {
   const router = useRouter();
 
-  const startGame = () => {
-    const gameId = uuidv4(); // unique game id
-    router.push(`/game/${gameId}/white`);
+  const startGame = async ({
+    timeControl = "unlimited",
+    timeLimit = null,
+    specterLink = null,
+  }) => {
+    try {
+      const response = await fetch("http://localhost:3001/createnewgame", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          time_control: timeControl,
+          time_limit: timeLimit,
+          specter_link: specterLink,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        console.log("Game created with ID:", data.game_id);
+        router.push(`/game/${data.game_id}/?choice=white`);
+      } else {
+        console.error("Failed to create game:", data.message);
+      }
+    } catch (error) {
+      console.error("Error during fetch:", error);
+    }
   };
 
   return (
@@ -55,11 +81,21 @@ export default function Home() {
             Fast-paced games with time controls of 5-15 minutes
           </p>
           <div className="space-x-2 flex justify-center ">
-            <button className="border border-gray-600 text-gray-300 px-3 py-1 rounded w-full">
-              <a href="/game/5">5 Min</a>
+            <button
+              onClick={() =>
+                startGame({ timeControl: "regular", timeLimit: 5 })
+              }
+              className="border border-gray-600 text-gray-300 px-3 py-1 rounded w-full"
+            >
+              5 Min
             </button>
-            <button className="border border-gray-600 text-gray-300 px-3 py-1 rounded w-full">
-              <a href="/game/5">10 Min</a>
+            <button
+              onClick={() =>
+                startGame({ timeControl: "regular", timeLimit: 10 })
+              }
+              className="border border-gray-600 text-gray-300 px-3 py-1 rounded w-full"
+            >
+              <a>10 Min</a>
             </button>
             <button className="border border-gray-600 text-gray-300 px-3 py-1 rounded w-full">
               <a href="/game/5">15 Min</a>
@@ -79,7 +115,7 @@ export default function Home() {
             onClick={startGame}
             className="bg-[#20b155] text-white hover:brightness-110 border border-[#20b155] px-4 py-2 rounded w-full"
           >
-            <a href="/game/123">Start Standard Game</a>
+            <a>Start Standard Game</a>
           </button>
         </div>
 

@@ -3,64 +3,95 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Chessboard } from "react-chessboard";
 import { Chess } from "chess.js";
-import { io } from "socket.io-client";
+import socketManager from "@/components/utils/socketManager";
 
-export default function ChessBoard({ gameId }) {
+export default function ChessBoard({ gameId, forcedColor = null }) {
   const chess = useRef(new Chess());
-  const socketRef = useRef(null);
   const [fen, setFen] = useState(chess.current.fen());
-  const [turn, setTurn] = useState("w"); // 'w' or 'b'
+  const [turn, setTurn] = useState("w");
   const [moves, setMoves] = useState([]);
-  const [color, setColor] = useState(null); // "white" or "black"
+  const [color, setColor] = useState(forcedColor);
   const [opponentOnline, setOpponentOnline] = useState(false);
+  const [playersOnline, setPlayersOnline] = useState(0);
 
   useEffect(() => {
-    // Connect to your socket.io server
-    socketRef.current = io("http://localhost:3001");
+    if (!gameId) return;
 
-    // Join the game room
-    socketRef.current.emit("joinGame", gameId);
+    // Connect and join game
+    socketManager.connect();
+    socketManager.joinGame(gameId);
 
-    // Receive assigned color from server
-    socketRef.current.on("assignColor", (assignedColor) => {
-      console.log("Assigned color:", assignedColor);
-      setColor(assignedColor);
-    });
+    // Set up event listeners
+    socketManager.on(
+      "assignColor",
+      (assignedColor) => {
+        console.log("Assigned color:", assignedColor);
+        if (!forcedColor) {
+          setColor(assignedColor);
+        }
+      },
+      "assignColor"
+    );
 
-    // Receive current game state (fen + moves)
-    socketRef.current.on("gameState", ({ fen, moves }) => {
-      if (fen) {
-        chess.current.load(fen);
-        setFen(fen);
-        setMoves(moves || []);
+    socketManager.on(
+      "loadMoves",
+      (moveHistory) => {
+        if (moveHistory && moveHistory.length > 0) {
+          const lastMove = moveHistory[moveHistory.length - 1];
+          if (lastMove.fen) {
+            chess.current.load(lastMove.fen);
+            setFen(lastMove.fen);
+            setTurn(chess.current.turn());
+          }
+          const moveList = moveHistory.map((m) => m.move);
+          setMoves(moveList);
+        }
+      },
+      "loadMoves"
+    );
+
+    socketManager.on(
+      "opponentMove",
+      ({ fen: newFen, move }) => {
+        chess.current.load(newFen);
+        setFen(newFen);
+        setMoves((prev) => [...prev, move]);
         setTurn(chess.current.turn());
-      }
-    });
+      },
+      "opponentMove"
+    );
 
-    // Receive opponent's move
-    socketRef.current.on("opponentMove", ({ fen, move }) => {
-      chess.current.load(fen);
-      setFen(fen);
-      setMoves((prev) => [...prev, move]);
-      setTurn(chess.current.turn());
-    });
+    socketManager.on(
+      "playerStatus",
+      ({ playersOnline: online, players }) => {
+        setPlayersOnline(online);
+        setOpponentOnline(online > 1);
+      },
+      "playerStatus"
+    );
 
-    // Receive opponent online/offline status
-    socketRef.current.on("playerStatus", ({ playerId, status }) => {
-      setOpponentOnline(status === "online");
-    });
+    socketManager.on(
+      "roomFull",
+      () => {
+        alert("This game already has two players. Cannot join.");
+      },
+      "roomFull"
+    );
 
-    // Handle room full error
-    socketRef.current.on("roomFull", () => {
-      alert("This game already has two players. Cannot join.");
-    });
+    socketManager.on(
+      "gameEnded",
+      ({ winner }) => {
+        alert(`Game ended! Winner: ${winner}`);
+      },
+      "gameEnded"
+    );
 
+    // Cleanup function
     return () => {
-      socketRef.current.disconnect();
+      socketManager.removeAllListeners();
     };
-  }, [gameId]);
+  }, [gameId, forcedColor]);
 
-  // When a piece is dropped
   function onDrop(sourceSquare, targetSquare) {
     if (!color) {
       alert("Waiting for server to assign your color...");
@@ -89,16 +120,13 @@ export default function ChessBoard({ gameId }) {
     }
 
     // Update local state
-    setFen(chess.current.fen());
+    const newFen = chess.current.fen();
+    setFen(newFen);
     setTurn(chess.current.turn());
     setMoves((prev) => [...prev, move.san]);
 
     // Emit move to server
-    socketRef.current.emit("moveMade", {
-      gameId,
-      fen: chess.current.fen(),
-      move: move.san,
-    });
+    socketManager.makeMove(gameId, move.san, newFen);
 
     return true;
   }
@@ -155,7 +183,7 @@ export default function ChessBoard({ gameId }) {
 
         {/* Opponent status */}
         <div>
-          Opponent:{" "}
+          Players online: {playersOnline}/2{" "}
           <span
             style={{
               display: "inline-block",
@@ -165,7 +193,7 @@ export default function ChessBoard({ gameId }) {
               backgroundColor: opponentOnline ? "limegreen" : "red",
               marginLeft: 6,
             }}
-            title={opponentOnline ? "Online" : "Offline"}
+            title={opponentOnline ? "Opponent Online" : "Waiting for opponent"}
           />
         </div>
       </div>
@@ -174,7 +202,7 @@ export default function ChessBoard({ gameId }) {
       <Chessboard
         position={fen}
         onPieceDrop={onDrop}
-        boardOrientation={color || "white"} // orientation based on assigned color
+        boardOrientation={color || "white"}
         arePiecesDraggable={true}
         boardWidth={480}
       />

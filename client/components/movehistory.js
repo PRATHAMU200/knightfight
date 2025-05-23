@@ -1,36 +1,48 @@
-import React, { useEffect, useRef } from "react";
+"use client";
 
-export default function MoveHistory({ moves = [], gameId }) {
-  const scrollRef = useRef();
+import React from "react";
 
-  useEffect(() => {
-    scrollRef.current?.scrollTo({
-      top: 0,
-      behavior: "smooth",
+export default function MoveHistory({ moves = [] }) {
+  // Group moves in pairs (white, black)
+  const movePairs = [];
+  for (let i = 0; i < moves.length; i += 2) {
+    movePairs.push({
+      moveNumber: Math.floor(i / 2) + 1,
+      white: moves[i] || "",
+      black: moves[i + 1] || "",
     });
-  }, [moves]);
+  }
 
   return (
-    <div className="bg-[#0e0e0e] border border-gray-700 rounded-xl p-4">
-      <h2 className="text-lg font-semibold mb-2 text-white">Move History</h2>
-      <div
-        className="overflow-y-auto max-h-[200px] pr-2 flex flex-col-reverse"
-        ref={scrollRef}
-      >
-        {moves.length === 0 ? (
-          <p className="text-gray-400">No moves yet</p>
-        ) : (
-          <ol className="text-gray-300 space-y-1 text-sm flex flex-col-reverse">
-            {[...moves].reverse().map((move, index) => (
-              <li key={index}>
-                <span className="text-gray-500">
-                  {Math.floor((moves.length - 1 - index) / 2) + 1}.
-                </span>{" "}
-                {move}
-              </li>
+    <div className="bg-[#121212] border border-gray-700 rounded-xl p-4">
+      <h3 className="text-white font-semibold mb-4">Move History</h3>
+
+      {moves.length === 0 ? (
+        <div className="text-gray-400 text-center py-4">
+          No moves yet. The game will begin when both players are ready.
+        </div>
+      ) : (
+        <div className="max-h-64 overflow-y-auto">
+          <div className="grid grid-cols-3 gap-2 text-sm">
+            {/* Header */}
+            <div className="text-gray-400 font-semibold">#</div>
+            <div className="text-gray-400 font-semibold">White</div>
+            <div className="text-gray-400 font-semibold">Black</div>
+
+            {/* Move pairs */}
+            {movePairs.map((pair, index) => (
+              <React.Fragment key={index}>
+                <div className="text-gray-300">{pair.moveNumber}</div>
+                <div className="text-white font-mono">{pair.white}</div>
+                <div className="text-white font-mono">{pair.black}</div>
+              </React.Fragment>
             ))}
-          </ol>
-        )}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-4 text-xs text-gray-400">
+        Total moves: {moves.length}
       </div>
     </div>
   );
