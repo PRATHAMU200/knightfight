@@ -57,12 +57,15 @@ export default function GamePage() {
   const searchParams = useSearchParams();
   const choiceFromQuery = searchParams.get("choice");
   const color =
-    choiceFromQuery === "black" || choiceFromQuery === "white"
-      ? choiceFromQuery
+    choiceFromQuery === "black"
+      ? "black"
+      : choiceFromQuery === "spectator"
+      ? "spectator"
       : "white";
-
+  console.log("So from here the color we get is : " + color);
   const [moves, setMoves] = useState([]);
   const [playersOnline, setPlayersOnline] = useState(0);
+  const [spectatorsOnline, setSpectatorsOnline] = useState(0);
   const [assignedColor, setAssignedColor] = useState(color);
   const [gameEnded, setGameEnded] = useState(false);
   const [whiteTime, setWhiteTime] = useState(null);
@@ -83,8 +86,9 @@ export default function GamePage() {
     // Set up game-level listeners
     socketManager.on(
       "playerStatus",
-      ({ playersOnline: online }) => {
+      ({ playersOnline: online, players, spectatorsOnline }) => {
         setPlayersOnline(online);
+        setSpectatorsOnline(spectatorsOnline || 0);
       },
       "gamePagePlayerStatus"
     );
@@ -93,6 +97,7 @@ export default function GamePage() {
       "assignColor",
       (newColor) => {
         setAssignedColor(newColor);
+        console.log("Set the color to: " + newColor);
       },
       "gamePageAssignColor"
     );
@@ -270,7 +275,7 @@ export default function GamePage() {
               {assignedColor?.charAt(0).toUpperCase() +
                 assignedColor?.slice(1) || "Waiting..."}
             </span>{" "}
-            ({playersOnline}/2 players online)
+            {/* ({playersOnline}/2 players online) */}
           </p>
         </div>
         <div className="flex space-x-4">
@@ -343,6 +348,17 @@ export default function GamePage() {
 
         {/* Center panel: Chessboard + Move history */}
         <div className="lg:w-2/4 flex flex-col space-y-4">
+          <div
+            style={{
+              textAlign: "center",
+              marginBottom: "10px",
+              color: "#666",
+              fontSize: "14px",
+            }}
+          >
+            Spectators Online: {spectatorsOnline}
+          </div>
+
           <div className="flex justify-center">
             <ChessBoard gameId={gameId} forcedColor={color} />
           </div>

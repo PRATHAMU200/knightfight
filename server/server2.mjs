@@ -172,6 +172,8 @@ io.on("connection", (socket) => {
       if (gameRoom.players.has(socket.id) && prevGameId !== gameId) {
         gameRoom.players.delete(socket.id);
         gameRoom.playerColors.delete(socket.id);
+        // Remove from spectators if rejoining
+        gameRoom.spectators.delete(socket.id);
       }
     });
 
@@ -182,6 +184,7 @@ io.on("connection", (socket) => {
       gameRooms.set(gameId, {
         players: new Set(),
         playerColors: new Map(),
+        spectators: new Set(),
       });
     }
 
@@ -191,6 +194,7 @@ io.on("connection", (socket) => {
       socket.join(gameId);
       socket.emit("assignRole", "spectator");
       console.log(`Spectator ${socket.id} joined game ${gameId}`);
+      gameRoom.spectators.add(socket.id);
     } else {
       // Existing player joining logic
       if (gameRoom.players.size >= 2 && !gameRoom.players.has(socket.id)) {
@@ -219,6 +223,7 @@ io.on("connection", (socket) => {
       }
 
       if (color) {
+        console.log("server setting color: " + color);
         gameRoom.playerColors.set(socket.id, color);
         socket.emit("assignColor", color);
       }
@@ -259,9 +264,13 @@ io.on("connection", (socket) => {
 
     // Notify all players in the room about player status
     const playersInRoom = Array.from(gameRoom.players);
+    const spectatorsInRoom = Array.from(gameRoom.spectators);
+
     io.to(gameId).emit("playerStatus", {
       playersOnline: playersInRoom.length,
       players: playersInRoom,
+      spectatorsOnline: spectatorsInRoom.length,
+      spectators: spectatorsInRoom,
     });
   });
 
@@ -378,23 +387,22 @@ io.on("connection", (socket) => {
     console.log("A user disconnected: " + socket.id);
 
     // Clean up player from all game rooms
-    gameRooms.forEach((gameRoom, gameId) => {
-      if (gameRoom.players.has(socket.id)) {
-        gameRoom.players.delete(socket.id);
-        gameRoom.playerColors.delete(socket.id);
-
-        // Notify remaining players about status change
-        const playersInRoom = Array.from(gameRoom.players);
-        io.to(gameId).emit("playerStatus", {
-          playersOnline: playersInRoom.length,
-          players: playersInRoom,
-        });
-
-        // Clean up empty rooms
-        if (gameRoom.players.size === 0) {
-          gameRooms.delete(gameId);
-        }
+    gameRooms.forEach((room, gameId) => {
+      if (room.players.has(socket.id)) {
+        room.players.delete(socket.id);
+        room.playerColors.delete(socket.id);
       }
+
+      if (room.spectators.has(socket.id)) {
+        room.spectators.delete(socket.id);
+      }
+
+      io.to(gameId).emit("playerStatus", {
+        playersOnline: room.players.size,
+        players: Array.from(room.players),
+        spectatorsOnline: room.spectators.size,
+        spectators: Array.from(room.spectators),
+      });
     });
   });
 });

@@ -18,6 +18,7 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
   const [showDrawOffer, setShowDrawOffer] = useState(false);
   const [drawOfferingPlayer, setDrawOfferingPlayer] = useState(null);
   const [userRole, setUserRole] = useState("player");
+  const [spectatorsOnline, setSpectatorsOnline] = useState(0);
 
   useEffect(() => {
     if (!gameId) return;
@@ -36,6 +37,7 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
       "assignColor",
       (assignedColor) => {
         console.log("Assigned color:", assignedColor);
+        console.log("forcced color: " + forcedColor);
         if (!forcedColor) {
           setColor(assignedColor);
         }
@@ -80,9 +82,10 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
 
     socketManager.on(
       "playerStatus",
-      ({ playersOnline: online, players }) => {
+      ({ playersOnline: online, players, spectatorsOnline }) => {
         setPlayersOnline(online);
         setOpponentOnline(online > 1);
+        setSpectatorsOnline(spectatorsOnline || 0);
       },
       "playerStatus"
     );
@@ -202,6 +205,9 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
 
   const handleSurrender = () => {
     if (gameEnded) return;
+    if (userRole === "spectator") {
+      return;
+    }
 
     if (confirm("Are you sure you want to surrender?")) {
       socketManager.surrenderGame(gameId, color);
@@ -215,12 +221,17 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
 
   const handleOfferDraw = () => {
     if (gameEnded) return;
-
+    if (userRole === "spectator") {
+      return;
+    }
     socketManager.emit("offerDraw", { gameId, offeringPlayer: color });
     alert("Draw offer sent to opponent.");
   };
 
   const handleDrawResponse = (accepted) => {
+    if (userRole === "spectator") {
+      return;
+    }
     socketManager.emit("respondToDraw", { gameId, accepted });
     setShowDrawOffer(false);
     setDrawOfferingPlayer(null);
@@ -292,7 +303,7 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
       )}
 
       {/* Draw Offer Modal */}
-      {showDrawOffer && (
+      {showDrawOffer && userRole === "player" && (
         <div
           style={{
             position: "absolute",
@@ -415,7 +426,8 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
         </div>
         {/* Opponent status */}
         <div>
-          Players online: {playersOnline}/2{" "}
+          Players online: {playersOnline}/2
+          {/* Spectators Online: {spectatorsOnline} */}
           <span
             style={{
               display: "inline-block",
@@ -431,7 +443,7 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
       </div>
 
       {/* Game Controls */}
-      {!gameEnded && playersOnline === 2 && (
+      {!gameEnded && playersOnline === 2 && userRole === "player" && (
         <div
           style={{
             marginBottom: 8,
@@ -470,6 +482,19 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
           >
             Surrender
           </button>
+        </div>
+      )}
+
+      {userRole === "spectator" && (
+        <div
+          style={{
+            textAlign: "center",
+            marginBottom: "10px",
+            color: "#666",
+            fontSize: "14px",
+          }}
+        >
+          Watching as Spectator | Spectators Online: {spectatorsOnline}
         </div>
       )}
 

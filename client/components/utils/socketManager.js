@@ -49,21 +49,25 @@ class SocketManager {
     }
   }
 
-  joinGame(gameId, playerId = null) {
-    if (!this.socket) {
-      this.connect();
+  joinGame(gameId, playerId = null, role = "player") {
+    if (!this.socket) this.connect();
+
+    if (this.currentGameId === gameId && this.currentRole === role) {
+      console.log("Already joined as", role);
+      return;
     }
 
-    // Leave previous game if any
     if (this.currentGameId && this.currentGameId !== gameId) {
       this.leaveGame();
     }
 
     this.currentGameId = gameId;
-    this.socket.emit("joinGame", {
-      gameId,
-      playerId: playerId || this.socket.id,
-    });
+    this.currentRole = role;
+
+    const id = playerId || this.socket.id;
+
+    console.log(`Joining game ${gameId} as ${role}: ${id}`);
+    this.socket.emit("joinGame", { gameId, playerId: id, role });
   }
 
   leaveGame() {
