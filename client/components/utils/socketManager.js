@@ -10,8 +10,16 @@ class SocketManager {
   }
 
   connect() {
-    if (this.socket && this.isConnected) {
-      return this.socket;
+    if (this.socket) {
+      if (this.isConnected) {
+        console.log("Already connected");
+        return this.socket;
+      }
+
+      if (this.socket.connected === false) {
+        console.log("Connection in progress");
+        return this.socket;
+      }
     }
 
     this.socket = io("http://localhost:3001", {
