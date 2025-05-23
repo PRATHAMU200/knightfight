@@ -37,7 +37,7 @@ export default function Navbar() {
             className="hover:text-white transition-colors"
             type="button"
           >
-            {item}
+            <a href="/">{item}</a>
           </button>
         ))}
       </div>

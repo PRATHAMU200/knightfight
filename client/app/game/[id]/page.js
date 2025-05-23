@@ -9,6 +9,13 @@ import ChessBoard from "@/components/chessboard";
 import socketManager from "@/components/utils/socketManager";
 
 function PlayerCard({ player, color, isOnline = false }) {
+  // Update player cards to show time:
+  const formatTime = (seconds) => {
+    if (!seconds) return "∞";
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
   return (
     <div className="bg-[#121212] border border-gray-700 rounded-xl p-4 mb-4">
       <h3 className="text-white font-semibold mb-2 flex items-center">
@@ -57,6 +64,18 @@ export default function GamePage() {
   const [moves, setMoves] = useState([]);
   const [playersOnline, setPlayersOnline] = useState(0);
   const [assignedColor, setAssignedColor] = useState(color);
+  const [gameEnded, setGameEnded] = useState(false);
+  const [whiteTime, setWhiteTime] = useState(null);
+  const [blackTime, setBlackTime] = useState(null);
+  const [currentTurn, setCurrentTurn] = useState("white");
+
+  const [showShareDropdown, setShowShareDropdown] = useState(false);
+  const [isSpectator, setIsSpectator] = useState(false);
+
+  useEffect(() => {
+    const spectatorMode = searchParams.get("choice") === "spectator";
+    setIsSpectator(spectatorMode);
+  }, [searchParams]);
 
   useEffect(() => {
     if (!gameId) return;
@@ -104,27 +123,140 @@ export default function GamePage() {
       socketManager.off("opponentMove");
     };
   }, [gameId]);
+  useEffect(() => {
+    const checkGameStatus = async () => {
+      try {
+        const response = await fetch(
+          `http://localhost:3001/game/${gameId}/status`
+        );
+        const data = await response.json();
+        if (data.winner) {
+          setGameEnded(true);
+        }
+      } catch (error) {
+        console.error("Error checking game status:", error);
+      }
+    };
 
+    if (gameId) {
+      checkGameStatus();
+    }
+  }, [gameId]);
+
+  // Update player cards to show time:
+  const formatTime = (seconds) => {
+    if (!seconds) return "∞";
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+  const generateGuestId = () => {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let result = "Guest";
+    for (let i = 0; i < 4; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  };
   // Dummy player and game info data
   const blackPlayer = {
-    name: assignedColor === "black" ? "You (Black)" : "Opponent (Black)",
+    name: assignedColor === "white" ? "You (White)" : `Guest (White)`,
+    //   assignedColor === "black"
+    //     ? "You (Black)"
+    //     : `${generateGuestId()} (Black)`,
     rating: 1400,
-    timeLeft: "12:45",
+    timeLeft: 12, //formatTime(blackTime),
     avatar: "B",
   };
 
   const whitePlayer = {
-    name: assignedColor === "white" ? "You (White)" : "Opponent (White)",
+    name: assignedColor === "white" ? "You (White)" : `Guest (White)`,
+    //   assignedColor === "white"
+    //     ? "You (White)"
+    //     : `${generateGuestId()} (White)`,
     rating: 1450,
-    timeLeft: "15:00",
+    timeLeft: 11, // formatTime(whiteTime),
     avatar: "W",
   };
 
-  const gameInfo = {
+  const [gameInfo, setGameInfo] = useState({
     type: "Standard",
-    timeControl: "10+5",
+    timeControl: "unlimited",
     otherDetails: "Online Match",
+  });
+
+  const copyShareLink = (role) => {
+    const baseUrl = window.location.origin;
+    const shareUrl = `${baseUrl}/game/${gameId}?choice=${role}`;
+    navigator.clipboard.writeText(shareUrl);
+    alert(
+      `${
+        role.charAt(0).toUpperCase() + role.slice(1)
+      } link copied to clipboard!`
+    );
+    setShowShareDropdown(false);
   };
+
+  // Add this useEffect for fetching game info:
+  useEffect(() => {
+    const fetchGameInfo = async () => {
+      try {
+        const response = await fetch(
+          `http://localhost:3001/game/${gameId}/status`
+        );
+        const data = await response.json();
+        setGameInfo({
+          type: "Standard",
+          timeControl:
+            data.time_control === "unlimited"
+              ? "Unlimited"
+              : `${data.time_limit} minutes`,
+          otherDetails: "Online Match",
+        });
+
+        if (data.time_limit) {
+          const timeInSeconds = data.time_limit * 60;
+          setWhiteTime(timeInSeconds);
+          setBlackTime(timeInSeconds);
+        }
+      } catch (error) {
+        console.error("Error fetching game info:", error);
+      }
+    };
+
+    if (gameId) {
+      fetchGameInfo();
+    }
+  }, [gameId]);
+
+  // Add timer countdown useEffect:
+  //   useEffect(() => {
+  //     if (!whiteTime || !blackTime || gameEnded) return;
+
+  //     const timer = setInterval(() => {
+  //       if (currentTurn === "white") {
+  //         setWhiteTime((prev) => {
+  //           if (prev <= 1) {
+  //             // White time up
+  //             socketManager.emit("timeUp", { gameId, loser: "white" });
+  //             return 0;
+  //           }
+  //           return prev - 1;
+  //         });
+  //       } else {
+  //         setBlackTime((prev) => {
+  //           if (prev <= 1) {
+  //             // Black time up
+  //             socketManager.emit("timeUp", { gameId, loser: "black" });
+  //             return 0;
+  //           }
+  //           return prev - 1;
+  //         });
+  //       }
+  //     }, 1000);
+
+  //     return () => clearInterval(timer);
+  //   }, [currentTurn, whiteTime, blackTime, gameEnded, gameId]);
 
   return (
     <div className="min-h-screen bg-black text-white p-6 flex flex-col space-y-6">
@@ -143,12 +275,42 @@ export default function GamePage() {
         </div>
         <div className="flex space-x-4">
           <a
-            href="/game/new"
+            href="/"
             className="px-4 py-2 bg-[#20b155] rounded-md font-semibold hover:brightness-110 transition"
           >
             <Plus className="inline-block mr-2 w-4 h-4" />
             New Game
           </a>
+          <div className="relative">
+            <button
+              onClick={() => setShowShareDropdown(!showShareDropdown)}
+              className="px-4 py-2 border border-gray-600 rounded-md hover:bg-green-700 transition"
+            >
+              Share Game
+            </button>
+            {showShareDropdown && (
+              <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-600 rounded-md shadow-lg z-10">
+                <button
+                  onClick={() => copyShareLink("white")}
+                  className="block w-full px-4 py-2 text-left hover:bg-gray-700"
+                >
+                  Share to White Player
+                </button>
+                <button
+                  onClick={() => copyShareLink("black")}
+                  className="block w-full px-4 py-2 text-left hover:bg-gray-700"
+                >
+                  Share to Black Player
+                </button>
+                <button
+                  onClick={() => copyShareLink("spectator")}
+                  className="block w-full px-4 py-2 text-left hover:bg-gray-700"
+                >
+                  Share to Spectator
+                </button>
+              </div>
+            )}
+          </div>
           <button className="px-4 py-2 border border-gray-600 rounded-md hover:bg-green-700 transition">
             <Settings className="inline-block mr-2 w-4 h-4" />
             Settings
@@ -196,6 +358,8 @@ export default function GamePage() {
             playerName={
               assignedColor === "white" ? "WhitePlayer" : "BlackPlayer"
             }
+            gameEnded={gameEnded}
+            isSpectator={isSpectator}
           />
         </div>
       </section>

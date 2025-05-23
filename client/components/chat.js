@@ -3,7 +3,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import socketManager from "@/components/utils/socketManager";
 
-export default function Chat({ gameId, playerName }) {
+export default function Chat({
+  gameId,
+  playerName,
+  gameEnded,
+  isSpectator = false,
+}) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const messagesEndRef = useRef(null);
@@ -49,9 +54,20 @@ export default function Chat({ gameId, playerName }) {
     };
   }, [gameId]);
 
+  // useEffect(() => {
+  //   // Scroll to bottom on new message
+  //   messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  // }, [messages]);
+  // Scroll chat to bottom on new message
+  const scrollContainerRef = useRef(null);
+
   useEffect(() => {
-    // Scroll to bottom on new message
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (!scrollContainerRef.current) return;
+
+    scrollContainerRef.current.scrollTo({
+      top: scrollContainerRef.current.scrollHeight,
+      behavior: "smooth",
+    });
   }, [messages]);
 
   const sendMessage = () => {
@@ -79,7 +95,10 @@ export default function Chat({ gameId, playerName }) {
     <div className="flex flex-col h-full bg-[#121212] p-4 rounded-xl">
       <h3 className="text-white font-semibold mb-4">Game Chat</h3>
 
-      <div className="flex-grow overflow-y-auto mb-4 space-y-2 max-h-96">
+      <div
+        className="flex-grow overflow-y-auto mb-4 space-y-2 max-h-96 scroll-container"
+        ref={scrollContainerRef}
+      >
         {messages.length === 0 ? (
           <div className="text-gray-400 text-center py-4">
             No messages yet. Start the conversation!
@@ -110,11 +129,11 @@ export default function Chat({ gameId, playerName }) {
           onKeyDown={handleKeyDown}
           placeholder="Type your message..."
           className="flex-grow rounded px-3 py-2 bg-gray-900 text-white outline-none border border-gray-600 focus:border-green-500"
-          disabled={!gameId}
+          disabled={!gameId || gameEnded || isSpectator}
         />
         <button
           onClick={sendMessage}
-          disabled={!input.trim() || !gameId}
+          disabled={!input.trim() || !gameId || gameEnded || isSpectator}
           className="bg-green-600 px-4 py-2 rounded hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed"
         >
           Send

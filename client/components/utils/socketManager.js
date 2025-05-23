@@ -106,8 +106,14 @@ class SocketManager {
   }
 
   // Chess-specific methods
-  makeMove(gameId, move, fen) {
-    this.emit("moveMade", { gameId, move, fen });
+  makeMove(gameId, move, fen, isGameEnd = false, winner = null) {
+    this.emit("moveMade", {
+      gameId,
+      move,
+      fen,
+      isCheckmate: isGameEnd && winner !== "draw",
+      winner,
+    });
   }
 
   sendChatMessage(gameId, user, text) {

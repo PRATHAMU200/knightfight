@@ -52,6 +52,7 @@ const initDb = async () => {
       specter_link TEXT,
       move_history JSONB DEFAULT '[]',
       winner VARCHAR(10) DEFAULT NULL,
+      is_private BOOLEAN DEFAULT false,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `);
@@ -86,14 +87,15 @@ app.post("/createnewgame", async (req, res) => {
     time_control = "unlimited",
     time_limit = null,
     specter_link = null,
+    is_private = false,
   } = req.body;
   const game_id = uuidv4();
 
   try {
     await pool.query(
-      `INSERT INTO games (game_id, time_control, time_limit, specter_link)
-       VALUES ($1, $2, $3, $4)`,
-      [game_id, time_control, time_limit, specter_link]
+      `INSERT INTO games (game_id, time_control, time_limit, specter_link, is_private)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [game_id, time_control, time_limit, specter_link, is_private]
     );
 
     res.json({ success: true, game_id });
@@ -103,13 +105,59 @@ app.post("/createnewgame", async (req, res) => {
   }
 });
 
+// Add this new endpoint after /createnewgame
+app.get("/public-games", async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT game_id, time_control, time_limit, created_at 
+      FROM games 
+      WHERE is_private = false AND winner IS NULL 
+      ORDER BY created_at DESC
+    `);
+
+    // Add player count for each game
+    const gamesWithPlayerCount = result.rows.map((game) => {
+      const gameRoom = gameRooms.get(game.game_id);
+      const playerCount = gameRoom ? gameRoom.players.size : 0;
+      return {
+        ...game,
+        playerCount,
+      };
+    });
+
+    res.json(gamesWithPlayerCount);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+// GET game status
+app.get("/game/:gameId/status", async (req, res) => {
+  const { gameId } = req.params;
+  try {
+    const result = await pool.query("SELECT * FROM games WHERE game_id = $1", [
+      gameId,
+    ]);
+    if (result.rows.length > 0) {
+      res.json(result.rows[0]);
+    } else {
+      res.status(404).json({ error: "Game not found" });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
 //Socket.io connections
 io.on("connection", (socket) => {
   console.log("A user connected: " + socket.id);
 
-  socket.on("joinGame", async ({ gameId, playerId }) => {
+  //Join game handler
+  socket.on("joinGame", async ({ gameId, playerId, role = "player" }) => {
     console.log(
-      `Player ${playerId || socket.id} attempting to join game ${gameId}`
+      `${role} ${playerId || socket.id} attempting to join game ${gameId}`
     );
 
     // Leave any previous rooms
@@ -119,7 +167,15 @@ io.on("connection", (socket) => {
       }
     });
 
-    socket.join(gameId);
+    // Clean up player from previous game rooms first
+    gameRooms.forEach((gameRoom, prevGameId) => {
+      if (gameRoom.players.has(socket.id) && prevGameId !== gameId) {
+        gameRoom.players.delete(socket.id);
+        gameRoom.playerColors.delete(socket.id);
+      }
+    });
+
+    //socket.join(gameId);
 
     // Initialize game room if it doesn't exist
     if (!gameRooms.has(gameId)) {
@@ -130,10 +186,26 @@ io.on("connection", (socket) => {
     }
 
     const gameRoom = gameRooms.get(gameId);
-    gameRoom.players.add(socket.id);
 
-    // Assign colors if not already assigned
-    if (!gameRoom.playerColors.has(socket.id)) {
+    if (role === "spectator") {
+      socket.join(gameId);
+      socket.emit("assignRole", "spectator");
+      console.log(`Spectator ${socket.id} joined game ${gameId}`);
+    } else {
+      // Existing player joining logic
+      if (gameRoom.players.size >= 2 && !gameRoom.players.has(socket.id)) {
+        socket.emit("roomFull");
+        return;
+      }
+
+      socket.join(gameId);
+
+      if (!gameRoom.players.has(socket.id)) {
+        gameRoom.players.add(socket.id);
+      }
+
+      // Existing color assignment logic continues...
+      // Assign colors if not already assigned
       const assignedColors = Array.from(gameRoom.playerColors.values());
       let color;
 
@@ -146,24 +218,29 @@ io.on("connection", (socket) => {
         return;
       }
 
-      gameRoom.playerColors.set(socket.id, color);
-      socket.emit("assignColor", color);
+      if (color) {
+        gameRoom.playerColors.set(socket.id, color);
+        socket.emit("assignColor", color);
+      }
+
+      console.log(
+        `Player ${
+          socket.id
+        } joined game ${gameId} as ${gameRoom.playerColors.get(socket.id)}`
+      );
     }
 
-    console.log(
-      `Player ${socket.id} joined game ${gameId} as ${gameRoom.playerColors.get(
-        socket.id
-      )}`
-    );
-
-    // Send existing move history
+    // Send existing move history and game status
     try {
       const result = await pool.query(
-        "SELECT move_history FROM games WHERE game_id = $1",
+        "SELECT move_history, winner FROM games WHERE game_id = $1",
         [gameId]
       );
       if (result.rows.length > 0) {
-        socket.emit("loadMoves", result.rows[0].move_history);
+        const gameData = result.rows[0];
+        socket.emit("loadMoves", gameData.move_history, {
+          winner: gameData.winner,
+        });
       }
     } catch (error) {
       console.error("Error loading moves:", error);
@@ -188,7 +265,31 @@ io.on("connection", (socket) => {
     });
   });
 
-  socket.on("moveMade", async ({ gameId, move, fen }) => {
+  //Add draw offer socket event (add this after the existing socket events)
+  socket.on("offerDraw", async ({ gameId, offeringPlayer }) => {
+    // Broadcast draw offer to opponent
+    socket.to(gameId).emit("drawOffer", { offeringPlayer });
+  });
+
+  socket.on("respondToDraw", async ({ gameId, accepted }) => {
+    if (accepted) {
+      try {
+        await pool.query("UPDATE games SET winner = $1 WHERE game_id = $2", [
+          "draw",
+          gameId,
+        ]);
+        io.to(gameId).emit("gameEnded", { winner: "draw" });
+      } catch (error) {
+        console.error("Error updating game result:", error);
+      }
+    } else {
+      // Notify that draw was rejected
+      io.to(gameId).emit("drawRejected");
+    }
+  });
+
+  //Making moves
+  socket.on("moveMade", async ({ gameId, move, fen, isCheckmate, winner }) => {
     try {
       // Fetch and parse existing history
       const gameResult = await pool.query(
@@ -206,8 +307,17 @@ io.on("connection", (socket) => {
         );
       }
 
-      // Broadcast move to other players in the room
-      socket.to(gameId).emit("opponentMove", { move, fen });
+      // Check if game ended due to checkmate
+      if (isCheckmate && winner) {
+        await pool.query("UPDATE games SET winner = $1 WHERE game_id = $2", [
+          winner,
+          gameId,
+        ]);
+        io.to(gameId).emit("gameEnded", { winner, reason: "checkmate" });
+      } else {
+        // Broadcast move to other players in the room
+        socket.to(gameId).emit("opponentMove", { move, fen });
+      }
     } catch (error) {
       console.error("Error saving move:", error);
     }
@@ -250,6 +360,19 @@ io.on("connection", (socket) => {
       console.error("Error updating game result:", error);
     }
   });
+
+  // socket.on("timeUp", async ({ gameId, loser }) => {
+  //   try {
+  //     const winner = loser === "white" ? "black" : "white";
+  //     await pool.query("UPDATE games SET winner = $1 WHERE game_id = $2", [
+  //       winner,
+  //       gameId,
+  //     ]);
+  //     io.to(gameId).emit("gameEnded", { winner, reason: "timeout" });
+  //   } catch (error) {
+  //     console.error("Error updating game result:", error);
+  //   }
+  // });
 
   socket.on("disconnect", () => {
     console.log("A user disconnected: " + socket.id);

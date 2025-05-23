@@ -10,28 +10,32 @@ import {
   Trophy,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 
 import { v4 as uuidv4 } from "uuid";
+import GameModal from "@/components/gamemodal";
 
 export default function Home() {
   const router = useRouter();
+  const [showModal, setShowModal] = useState(false);
+  const [publicGames, setPublicGames] = useState([]);
 
-  const startGame = async ({
-    timeControl = "unlimited",
-    timeLimit = null,
-    specterLink = null,
-  }) => {
+  const startGame = async (gameOptions = {}) => {
+    const defaultOptions = {
+      time_control: "unlimited",
+      time_limit: null,
+      specter_link: null,
+      is_private: false,
+      ...gameOptions,
+    };
+
     try {
       const response = await fetch("http://localhost:3001/createnewgame", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          time_control: timeControl,
-          time_limit: timeLimit,
-          specter_link: specterLink,
-        }),
+        body: JSON.stringify(defaultOptions),
       });
 
       const data = await response.json();
@@ -47,6 +51,22 @@ export default function Home() {
     }
   };
 
+  const fetchPublicGames = async () => {
+    try {
+      const response = await fetch("http://localhost:3001/public-games");
+      const games = await response.json();
+      setPublicGames(games);
+    } catch (error) {
+      console.error("Error fetching public games:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchPublicGames();
+    const interval = setInterval(fetchPublicGames, 5000); // Refresh every 5 seconds
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="text-white px-6 md:px-20 py-8 space-y-16">
       {/* Section 1: Live Chess */}
@@ -58,10 +78,16 @@ export default function Home() {
           </p>
         </div>
         <div className="flex space-x-4">
-          <button className="bg-[#20b155] text-white hover:brightness-110 border border-[#20b155] px-4 py-2 rounded flex items-center">
+          <button
+            className="bg-[#20b155] text-white hover:brightness-110 border border-[#20b155] px-4 py-2 rounded flex items-center"
+            onClick={() => setShowModal(true)}
+          >
             <PlayIcon className="w-4 h-4 mr-2" /> New Game
           </button>
-          <button className="border border-gray-500 text-gray-200 hover:text-white px-4 py-2 rounded flex items-center">
+          <button
+            className="border border-gray-500 text-gray-200 hover:text-white px-4 py-2 rounded flex items-center"
+            onClick={() => startGame()}
+          >
             <UserPlus className="w-4 h-4 mr-2" /> Play as Guest
           </button>
           <button className="border border-gray-500 text-gray-200 hover:text-white px-4 py-2 rounded flex items-center">
@@ -95,10 +121,15 @@ export default function Home() {
               }
               className="border border-gray-600 text-gray-300 px-3 py-1 rounded w-full"
             >
-              <a>10 Min</a>
+              10 Min
             </button>
-            <button className="border border-gray-600 text-gray-300 px-3 py-1 rounded w-full">
-              <a href="/game/5">15 Min</a>
+            <button
+              className="border border-gray-600 text-gray-300 px-3 py-1 rounded w-full"
+              onClick={() =>
+                startGame({ timeControl: "regular", timeLimit: 15 })
+              }
+            >
+              15 Min
             </button>
           </div>
         </div>
@@ -112,10 +143,10 @@ export default function Home() {
             Classic chess with standard rules and time controls
           </p>
           <button
-            onClick={startGame}
+            onClick={() => setShowModal(true)}
             className="bg-[#20b155] text-white hover:brightness-110 border border-[#20b155] px-4 py-2 rounded w-full"
           >
-            <a>Start Standard Game</a>
+            Start Standard Game
           </button>
         </div>
 
@@ -146,8 +177,58 @@ export default function Home() {
           </button>
         </div>
       </section>
-
-      {/* Section 4: Share & Play */}
+      {/* Section 4: Public Games */}
+      <section>
+        <h2 className="text-2xl font-bold mb-4">Join Public Games</h2>
+        <div className="space-y-3">
+          {publicGames.length === 0 ? (
+            <div className="border border-gray-700 bg-transparent rounded p-6 text-center">
+              <p className="text-gray-400">No public games available</p>
+            </div>
+          ) : (
+            publicGames.map((game) => (
+              <div
+                key={game.game_id}
+                className="border border-gray-700 bg-transparent rounded p-4 flex justify-between items-center"
+              >
+                <div>
+                  <p className="text-white font-semibold">
+                    {game.time_control === "unlimited"
+                      ? "Unlimited"
+                      : `${game.time_limit} min`}{" "}
+                    Game
+                  </p>
+                  <p className="text-gray-400 text-sm">
+                    Players: {game.playercount}/2 • Created:{" "}
+                    {new Date(game.created_at).toLocaleTimeString()}
+                  </p>
+                </div>
+                <div className="space-x-2">
+                  {game.playercount < 2 ? (
+                    <button
+                      onClick={() =>
+                        router.push(`/game/${game.game_id}?choice=player`)
+                      }
+                      className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                    >
+                      Join as Player
+                    </button>
+                  ) : null}
+                  <button
+                    onClick={() =>
+                      router.push(`/game/${game.game_id}?choice=spectator`)
+                    }
+                    className="border border-gray-600 text-gray-300 px-4 py-2 rounded hover:bg-gray-700"
+                  >
+                    Spectate
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+      {/* Section 5: Share & Play */}
       <section>
         <div className="border border-gray-700 bg-transparent rounded p-6">
           <div className="flex items-center mb-2">
@@ -158,13 +239,18 @@ export default function Home() {
             Create a game and share the link with a friend to play together
           </p>
           <button
-            onClick={startGame}
+            onClick={() => startGame()}
             className="text-white hover:brightness-110 border border-gray-600 px-4 py-2 rounded w-full"
           >
             Create & Share Game Link
           </button>
         </div>
       </section>
+      <GameModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        onCreateGame={startGame}
+      />
     </div>
   );
 }

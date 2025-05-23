@@ -13,13 +13,23 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
   const [color, setColor] = useState(forcedColor);
   const [opponentOnline, setOpponentOnline] = useState(false);
   const [playersOnline, setPlayersOnline] = useState(0);
+  const [gameEnded, setGameEnded] = useState(false);
+  const [gameResult, setGameResult] = useState(null);
+  const [showDrawOffer, setShowDrawOffer] = useState(false);
+  const [drawOfferingPlayer, setDrawOfferingPlayer] = useState(null);
+  const [userRole, setUserRole] = useState("player");
 
   useEffect(() => {
     if (!gameId) return;
 
     // Connect and join game
     socketManager.connect();
-    socketManager.joinGame(gameId);
+    //socketManager.joinGame(gameId);
+    // In the useEffect, replace the joinGame call:
+    const urlParams = new URLSearchParams(window.location.search);
+    const role =
+      urlParams.get("choice") === "spectator" ? "spectator" : "player";
+    socketManager.joinGame(gameId, null, role);
 
     // Set up event listeners
     socketManager.on(
@@ -35,7 +45,8 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
 
     socketManager.on(
       "loadMoves",
-      (moveHistory) => {
+      (moveHistory, gameStatus) => {
+        console.log("loadMoves event triggered", moveHistory, gameStatus);
         if (moveHistory && moveHistory.length > 0) {
           const lastMove = moveHistory[moveHistory.length - 1];
           if (lastMove.fen) {
@@ -45,6 +56,12 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
           }
           const moveList = moveHistory.map((m) => m.move);
           setMoves(moveList);
+        }
+
+        // Handle game status if provided
+        if (gameStatus && gameStatus.winner) {
+          setGameEnded(true);
+          setGameResult({ winner: gameStatus.winner, reason: "previous_game" });
         }
       },
       "loadMoves"
@@ -80,10 +97,36 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
 
     socketManager.on(
       "gameEnded",
-      ({ winner }) => {
-        alert(`Game ended! Winner: ${winner}`);
+      ({ winner, reason }) => {
+        setGameEnded(true);
+        setGameResult({ winner, reason: reason || "game_over" });
       },
       "gameEnded"
+    );
+
+    socketManager.on(
+      "drawOffer",
+      ({ offeringPlayer }) => {
+        setShowDrawOffer(true);
+        setDrawOfferingPlayer(offeringPlayer);
+      },
+      "drawOffer"
+    );
+
+    socketManager.on(
+      "drawRejected",
+      () => {
+        alert("Your draw offer was rejected.");
+      },
+      "drawRejected"
+    );
+
+    socketManager.on(
+      "assignRole",
+      (role) => {
+        setUserRole(role);
+      },
+      "assignRole"
     );
 
     // Cleanup function
@@ -93,8 +136,17 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
   }, [gameId, forcedColor]);
 
   function onDrop(sourceSquare, targetSquare) {
+    if (userRole === "spectator") {
+      alert("Spectators cannot make moves!");
+      return false;
+    }
     if (!color) {
       alert("Waiting for server to assign your color...");
+      return false;
+    }
+
+    if (gameEnded) {
+      alert("Game has ended!");
       return false;
     }
 
@@ -125,14 +177,186 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
     setTurn(chess.current.turn());
     setMoves((prev) => [...prev, move.san]);
 
+    // Check for checkmate or stalemate
+    const isCheckmate = chess.current.isCheckmate();
+    const isStalemate = chess.current.isStalemate();
+
+    let winner = null;
+    if (isCheckmate) {
+      winner = color; // Current player wins
+    } else if (isStalemate) {
+      winner = "draw";
+    }
+
     // Emit move to server
-    socketManager.makeMove(gameId, move.san, newFen);
+    socketManager.makeMove(
+      gameId,
+      move.san,
+      newFen,
+      isCheckmate || isStalemate,
+      winner
+    );
 
     return true;
   }
 
+  const handleSurrender = () => {
+    if (gameEnded) return;
+
+    if (confirm("Are you sure you want to surrender?")) {
+      socketManager.surrenderGame(gameId, color);
+      setGameEnded(true);
+      setGameResult({
+        winner: color === "white" ? "black" : "white",
+        reason: "surrender",
+      });
+    }
+  };
+
+  const handleOfferDraw = () => {
+    if (gameEnded) return;
+
+    socketManager.emit("offerDraw", { gameId, offeringPlayer: color });
+    alert("Draw offer sent to opponent.");
+  };
+
+  const handleDrawResponse = (accepted) => {
+    socketManager.emit("respondToDraw", { gameId, accepted });
+    setShowDrawOffer(false);
+    setDrawOfferingPlayer(null);
+  };
+
   return (
-    <div style={{ maxWidth: 500, margin: "auto" }}>
+    <div style={{ maxWidth: 500, margin: "auto", position: "relative" }}>
+      {/* Game Result Overlay */}
+      {gameEnded && gameResult && (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.8)",
+            backdropFilter: "blur(5px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            borderRadius: 8,
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#333",
+              padding: "30px",
+              borderRadius: "12px",
+              textAlign: "center",
+              color: "white",
+              maxWidth: "300px",
+            }}
+          >
+            <h2 style={{ margin: "0 0 15px 0", fontSize: "24px" }}>
+              Game Over!
+            </h2>
+            <p style={{ margin: "0 0 20px 0", fontSize: "18px" }}>
+              {gameResult.winner === "draw"
+                ? "It's a Draw!"
+                : gameResult.winner === color
+                ? "You Won!"
+                : "You Lost!"}
+            </p>
+            <p style={{ margin: "0 0 20px 0", fontSize: "14px", opacity: 0.8 }}>
+              {gameResult.reason === "checkmate"
+                ? "By Checkmate"
+                : gameResult.reason === "surrender"
+                ? "By Surrender"
+                : "Game Ended"}
+            </p>
+            <button
+              onClick={() => (window.location.href = "/")}
+              style={{
+                backgroundColor: "#20b155",
+                color: "white",
+                border: "none",
+                padding: "10px 20px",
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontSize: "16px",
+              }}
+            >
+              New Game
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Draw Offer Modal */}
+      {showDrawOffer && (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.8)",
+            backdropFilter: "blur(3px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 999,
+            borderRadius: 8,
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#333",
+              padding: "25px",
+              borderRadius: "10px",
+              textAlign: "center",
+              color: "white",
+              maxWidth: "280px",
+            }}
+          >
+            <h3 style={{ margin: "0 0 15px 0" }}>Draw Offer</h3>
+            <p style={{ margin: "0 0 20px 0" }}>
+              Your opponent is offering a draw. Do you accept?
+            </p>
+            <div
+              style={{ display: "flex", gap: "10px", justifyContent: "center" }}
+            >
+              <button
+                onClick={() => handleDrawResponse(true)}
+                style={{
+                  backgroundColor: "#20b155",
+                  color: "white",
+                  border: "none",
+                  padding: "8px 16px",
+                  borderRadius: "5px",
+                  cursor: "pointer",
+                }}
+              >
+                Accept
+              </button>
+              <button
+                onClick={() => handleDrawResponse(false)}
+                style={{
+                  backgroundColor: "#dc2626",
+                  color: "white",
+                  border: "none",
+                  padding: "8px 16px",
+                  borderRadius: "5px",
+                  cursor: "pointer",
+                }}
+              >
+                Decline
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Status Bar */}
       <div
         style={{
@@ -149,7 +373,9 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
       >
         {/* Turn indicator */}
         <div>
-          {color && turn === (color === "white" ? "w" : "b") ? (
+          {gameEnded ? (
+            <span style={{ fontWeight: "bold" }}>Game Ended</span>
+          ) : color && turn === (color === "white" ? "w" : "b") ? (
             <>
               <span style={{ fontWeight: "bold" }}>Your turn</span>
               <span
@@ -180,7 +406,13 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
             </>
           )}
         </div>
-
+        <div>
+          {chess.current.isCheck() && (
+            <span style={{ color: "red", marginLeft: 8, fontWeight: "bold" }}>
+              CHECK!
+            </span>
+          )}
+        </div>
         {/* Opponent status */}
         <div>
           Players online: {playersOnline}/2{" "}
@@ -198,12 +430,55 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
         </div>
       </div>
 
+      {/* Game Controls */}
+      {!gameEnded && playersOnline === 2 && (
+        <div
+          style={{
+            marginBottom: 8,
+            display: "flex",
+            gap: 8,
+            justifyContent: "center",
+          }}
+        >
+          <button
+            onClick={handleOfferDraw}
+            style={{
+              backgroundColor: "#fbbf24",
+              color: "black",
+              border: "none",
+              padding: "6px 12px",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontSize: "14px",
+              fontWeight: "bold",
+            }}
+          >
+            Offer Draw
+          </button>
+          <button
+            onClick={handleSurrender}
+            style={{
+              backgroundColor: "#dc2626",
+              color: "white",
+              border: "none",
+              padding: "6px 12px",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontSize: "14px",
+              fontWeight: "bold",
+            }}
+          >
+            Surrender
+          </button>
+        </div>
+      )}
+
       {/* Chessboard */}
       <Chessboard
         position={fen}
         onPieceDrop={onDrop}
         boardOrientation={color || "white"}
-        arePiecesDraggable={true}
+        arePiecesDraggable={!gameEnded}
         boardWidth={480}
       />
 
