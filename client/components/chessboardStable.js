@@ -6,11 +6,7 @@ import { Chess } from "chess.js";
 import socketManager from "@/components/utils/socketManager";
 import { useToast } from "@/components/ui/toast";
 
-export default function ChessBoard({
-  gameId,
-  forcedColor = null,
-  boardStyle = null,
-}) {
+export default function ChessBoard({ gameId, forcedColor = null }) {
   const chess = useRef(new Chess());
   const [fen, setFen] = useState(chess.current.fen());
   const [turn, setTurn] = useState("w");
@@ -28,9 +24,6 @@ export default function ChessBoard({
   const [blackTime, setBlackTime] = useState(null);
   const [gameInfo, setGameInfo] = useState(null);
   const { showToast, ToastContainer } = useToast();
-  const [showUndoRequest, setShowUndoRequest] = useState(false);
-  const [undoRequestingPlayer, setUndoRequestingPlayer] = useState(null);
-  const [gameHistory, setGameHistory] = useState([]);
 
   const playersOnlineRef = useRef(playersOnline);
 
@@ -141,43 +134,6 @@ export default function ChessBoard({
         showToast("Your draw offer was rejected", "warning");
       },
       "drawRejected"
-    );
-
-    socketManager.on(
-      "undoMoveRequest",
-      ({ requestingPlayer }) => {
-        setShowUndoRequest(true);
-        setUndoRequestingPlayer(requestingPlayer);
-      },
-      "undoMoveRequest"
-    );
-
-    socketManager.on(
-      "undoMoveRejected",
-      () => {
-        showToast("Your undo request was rejected", "warning");
-      },
-      "undoMoveRejected"
-    );
-
-    socketManager.on(
-      "moveUndone",
-      ({ newFen, newTurn, removedMove }) => {
-        chess.current.load(newFen);
-        setFen(newFen);
-        setTurn(newTurn);
-        setMoves((prev) => prev.slice(0, -1)); // Remove last move
-        showToast("Move has been undone", "success");
-      },
-      "moveUndone"
-    );
-
-    socketManager.on(
-      "undoMoveError",
-      ({ message }) => {
-        showToast(message, "error");
-      },
-      "undoMoveError"
     );
 
     socketManager.on(
@@ -305,16 +261,6 @@ export default function ChessBoard({
     setTurn(chess.current.turn());
     setMoves((prev) => [...prev, move.san]);
 
-    // Track game history for undo functionality
-    setGameHistory((prev) => [
-      ...prev,
-      {
-        fen: chess.current.fen(),
-        turn: chess.current.turn(),
-        lastMove: move.san,
-      },
-    ]);
-
     // Check for checkmate or stalemate
     const isCheckmate = chess.current.isCheckmate();
     const isStalemate = chess.current.isStalemate();
@@ -384,36 +330,6 @@ export default function ChessBoard({
     setDrawOfferingPlayer(null);
   };
 
-  const handleRequestUndoMove = () => {
-    if (gameEnded) return;
-    if (userRole === "spectator") return;
-    if (moves.length === 0) {
-      showToast("No moves to undo", "warning");
-      return;
-    }
-
-    socketManager.requestUndoMove(gameId, color);
-    showToast("Undo request sent to opponent", "info");
-  };
-
-  const handleUndoResponse = (accepted) => {
-    if (userRole === "spectator") return;
-
-    let gameState = null;
-    console.log("Draw accepted");
-    if (accepted && gameHistory.length > 1) {
-      console.log("Draw accepted got here");
-      // Get the previous game state (before the last move)
-      gameState = gameHistory[gameHistory.length - 2];
-      gameState.gameId = gameId;
-      console.log(gameState);
-    }
-
-    socketManager.respondToUndoMove(gameId, accepted, gameState);
-    setShowUndoRequest(false);
-    setUndoRequestingPlayer(null);
-  };
-
   return (
     // <div style={{ maxWidth: 500, margin: "auto", position: "relative" }}>
     <div style={{ width: "100%", margin: "auto", position: "relative" }}>
@@ -428,7 +344,7 @@ export default function ChessBoard({
             right: 0,
             bottom: 0,
             backgroundColor: "rgba(0, 0, 0, 0.8)",
-            backdropFilter: "blur(0.5px)",
+            backdropFilter: "blur(5px)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -495,7 +411,7 @@ export default function ChessBoard({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            zIndex: 99,
+            zIndex: 999,
             borderRadius: 8,
           }}
         >
@@ -547,86 +463,18 @@ export default function ChessBoard({
         </div>
       )}
 
-      {/* Undo Move Request Modal */}
-      {showUndoRequest && userRole === "player" && (
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.8)",
-            backdropFilter: "blur(3px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 999,
-            borderRadius: 8,
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: "#333",
-              padding: "25px",
-              borderRadius: "10px",
-              textAlign: "center",
-              color: "white",
-              maxWidth: "280px",
-            }}
-          >
-            <h3 style={{ margin: "0 0 15px 0" }}>Undo Move Request</h3>
-            <p style={{ margin: "0 0 20px 0" }}>
-              Your opponent wants to undo their last move. Do you allow it?
-            </p>
-            <div
-              style={{ display: "flex", gap: "10px", justifyContent: "center" }}
-            >
-              <button
-                onClick={() => handleUndoResponse(true)}
-                style={{
-                  backgroundColor: "#8b5cf6",
-                  color: "white",
-                  border: "none",
-                  padding: "8px 16px",
-                  borderRadius: "5px",
-                  cursor: "pointer",
-                }}
-              >
-                Allow Undo
-              </button>
-              <button
-                onClick={() => handleUndoResponse(false)}
-                style={{
-                  backgroundColor: "#dc2626",
-                  color: "white",
-                  border: "none",
-                  padding: "8px 16px",
-                  borderRadius: "5px",
-                  cursor: "pointer",
-                }}
-              >
-                Decline
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Status Bar */}
       <div
         style={{
           marginBottom: 8,
-          padding: 12,
-          backgroundColor: "#1f2937",
+          padding: 8,
+          backgroundColor: "#222",
           color: "white",
-          borderRadius: 8,
+          borderRadius: 4,
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
           fontSize: 16,
-          border: "1px solid #374151",
-          boxShadow: "0 4px 6px rgba(0, 0, 0, 0.3)",
         }}
       >
         {/* Turn indicator */}
@@ -688,55 +536,6 @@ export default function ChessBoard({
           />
         </div>
       </div>
-      {/* Invite Player message*/}
-      {/* Invite Player Message - Add this right after the Status Bar and before Game Controls */}
-      {!gameEnded && playersOnline === 1 && userRole === "player" && (
-        <div
-          style={{
-            marginBottom: 12,
-            padding: 16,
-            backgroundColor: "#1e3a8a",
-            color: "white",
-            borderRadius: 8,
-            textAlign: "center",
-            border: "1px solid #3b82f6",
-            boxShadow: "0 4px 6px rgba(0, 0, 0, 0.3)",
-          }}
-        >
-          <p style={{ margin: "0 0 8px 0", fontWeight: "bold" }}>
-            Waiting for opponent to join...
-          </p>
-          <p style={{ margin: "0 0 12px 0", fontSize: "14px" }}>
-            Send this link to invite a player:
-          </p>
-          <div
-            style={{
-              backgroundColor: "#1e40af",
-              padding: "8px 12px",
-              borderRadius: "6px",
-              fontSize: "12px",
-              wordBreak: "break-all",
-              cursor: "pointer",
-              border: "1px solid #3b82f6",
-            }}
-            onClick={() => {
-              const inviteColor = color === "white" ? "black" : "white";
-              const inviteLink = `${window.location.origin}/game/${gameId}?choice=${inviteColor}`;
-              navigator.clipboard.writeText(inviteLink).then(() => {
-                showToast("Invite link copied to clipboard!", "success");
-              });
-            }}
-            title="Click to copy"
-          >
-            {`${window.location.origin}/game/${gameId}?choice=${
-              color === "white" ? "black" : "white"
-            }`}
-          </div>
-          <p style={{ margin: "8px 0 0 0", fontSize: "12px", opacity: 0.8 }}>
-            Click the link above to copy it
-          </p>
-        </div>
-      )}
 
       {/* Game Controls */}
       {!gameEnded && playersOnline === 2 && userRole === "player" && (
@@ -744,52 +543,24 @@ export default function ChessBoard({
           style={{
             marginBottom: 8,
             display: "flex",
-            gap: 12,
+            gap: 8,
             justifyContent: "center",
           }}
         >
           <button
             onClick={handleOfferDraw}
             style={{
-              backgroundColor: "#f59e0b",
-              color: "white",
+              backgroundColor: "#fbbf24",
+              color: "black",
               border: "none",
-              padding: "8px 16px",
-              borderRadius: "6px",
+              padding: "6px 12px",
+              borderRadius: "4px",
               cursor: "pointer",
               fontSize: "14px",
               fontWeight: "bold",
-              boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-              transition: "all 0.2s",
-            }}
-            onMouseOver={(e) => (e.target.style.backgroundColor = "#d97706")}
-            onMouseOut={(e) => (e.target.style.backgroundColor = "#f59e0b")}
-          >
-            🤝 Offer Draw
-          </button>
-          <button
-            onClick={handleRequestUndoMove}
-            disabled={moves.length === 0}
-            style={{
-              backgroundColor: moves.length === 0 ? "#6b7280" : "#8b5cf6",
-              color: "white",
-              border: "none",
-              padding: "8px 16px",
-              borderRadius: "6px",
-              cursor: moves.length === 0 ? "not-allowed" : "pointer",
-              fontSize: "14px",
-              fontWeight: "bold",
-              boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-              transition: "all 0.2s",
-            }}
-            onMouseOver={(e) => {
-              if (moves.length > 0) e.target.style.backgroundColor = "#7c3aed";
-            }}
-            onMouseOut={(e) => {
-              if (moves.length > 0) e.target.style.backgroundColor = "#8b5cf6";
             }}
           >
-            ↶ Request Undo
+            Offer Draw
           </button>
           <button
             onClick={handleSurrender}
@@ -797,18 +568,14 @@ export default function ChessBoard({
               backgroundColor: "#dc2626",
               color: "white",
               border: "none",
-              padding: "8px 16px",
-              borderRadius: "6px",
+              padding: "6px 12px",
+              borderRadius: "4px",
               cursor: "pointer",
               fontSize: "14px",
               fontWeight: "bold",
-              boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-              transition: "all 0.2s",
             }}
-            onMouseOver={(e) => (e.target.style.backgroundColor = "#b91c1c")}
-            onMouseOut={(e) => (e.target.style.backgroundColor = "#dc2626")}
           >
-            🏳️ Surrender
+            Surrender
           </button>
         </div>
       )}
@@ -832,17 +599,6 @@ export default function ChessBoard({
         onPieceDrop={onDrop}
         boardOrientation={color || "white"}
         arePiecesDraggable={!gameEnded && userRole === "player"}
-        customBoardStyle={{
-          borderRadius: "8px",
-          boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
-          border: "2px solid #374151",
-        }}
-        customLightSquareStyle={
-          boardStyle?.lightSquareStyle || { backgroundColor: "#f0d9b5" }
-        }
-        customDarkSquareStyle={
-          boardStyle?.darkSquareStyle || { backgroundColor: "#b58863" }
-        }
         // boardWidth={480}
         onPieceDragBegin={(sourceSquare, piece) => {
           const canDrag =

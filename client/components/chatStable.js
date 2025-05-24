@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import socketManager from "@/components/utils/socketManager";
-import { Send } from "lucide-react";
 
 export default function Chat({
   gameId,
@@ -93,38 +92,31 @@ export default function Chat({
   };
 
   return (
-    <div className="flex flex-col h-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6 rounded-2xl shadow-2xl border border-gray-700/50 backdrop-blur-sm">
-      <h3 className="text-white font-bold text-lg mb-6 flex items-center gap-2 border-b border-gray-700/50 pb-3">
-        <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-        Game Chat
-      </h3>
+    <div className="flex flex-col h-full bg-[#121212] p-4 rounded-xl">
+      <h3 className="text-white font-semibold mb-4">Game Chat</h3>
+
       <div
-        className="flex-grow overflow-y-auto mb-6 space-y-3 max-h-96 scroll-container pr-2 scrollbar-thin scrollbar-track-gray-800 scrollbar-thumb-gray-600 hover:scrollbar-thumb-gray-500"
+        className="flex-grow overflow-y-auto mb-4 space-y-2 max-h-96 scroll-container"
         ref={scrollContainerRef}
       >
         {messages.length === 0 ? (
-          <div className="text-gray-400 text-center py-8 flex flex-col items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-gray-700/50 flex items-center justify-center">
-              <span className="text-2xl">💬</span>
-            </div>
-            <p className="text-sm">No messages yet. Start the conversation!</p>
+          <div className="text-gray-400 text-center py-4">
+            No messages yet. Start the conversation!
           </div>
         ) : (
           messages.map((msg, idx) => (
             <div
               key={idx}
-              className={`p-3 rounded-2xl break-words shadow-lg transition-all duration-200 hover:shadow-xl ${
+              className={`p-2 rounded-lg break-words ${
                 msg.user === "System"
-                  ? "bg-gradient-to-r from-amber-500 to-yellow-500 text-black text-center mx-auto max-w-full border border-yellow-400/30 shadow-yellow-500/20"
+                  ? "bg-yellow-600 text-black text-center mx-auto max-w-full border border-yellow-400"
                   : msg.user === playerName || msg.user === "You"
-                  ? "bg-gradient-to-r from-green-600 to-green-500 text-white self-end ml-auto max-w-xs shadow-green-500/20 transform hover:scale-[1.02]"
-                  : "bg-gradient-to-r from-gray-700 to-gray-600 text-gray-100 self-start mr-auto max-w-xs shadow-gray-700/30 border border-gray-600/30"
+                  ? "bg-green-600 text-white self-end ml-auto max-w-xs"
+                  : "bg-gray-700 text-gray-200 self-start mr-auto max-w-xs"
               }`}
             >
               {msg.user !== "System" && (
-                <div className="text-xs opacity-80 mb-2 font-medium tracking-wide">
-                  {msg.user}
-                </div>
+                <div className="text-xs opacity-75 mb-1">{msg.user}</div>
               )}
               <div
                 className={msg.user === "System" ? "font-semibold text-sm" : ""}
@@ -137,22 +129,22 @@ export default function Chat({
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="relative flex bg-gray-800/50 p-3 rounded-xl border border-gray-700/50 backdrop-blur-sm">
+      <div className="flex space-x-2">
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Type your message..."
-          className="flex-grow rounded-xl px-4 py-3 bg-gray-900/80 text-white outline-none border border-gray-600/50 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all duration-200 placeholder-gray-400 backdrop-blur-sm"
+          className="flex-grow rounded px-3 py-2 bg-gray-900 text-white outline-none border border-gray-600 focus:border-green-500"
           disabled={!gameId || gameEnded || isSpectator}
         />
         <button
           onClick={sendMessage}
           disabled={!input.trim() || !gameId || gameEnded || isSpectator}
-          className="absolute right-6 top-1/2 -translate-y-1/2 p-2 text-white bg-gradient-to-r from-green-600 to-green-500 rounded-full hover:from-green-700 hover:to-green-600 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-green-500/25"
+          className="bg-green-600 px-4 py-2 rounded hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed"
         >
-          <Send width={20} height={20} />
+          Send
         </button>
       </div>
     </div>

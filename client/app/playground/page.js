@@ -290,13 +290,13 @@ export default function PlaygroundPage() {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center space-x-4">
-          <button
+          {/* <button
             onClick={() => (window.location.href = "/")}
             className="flex items-center px-4 py-2 bg-gray-800 rounded-md hover:bg-gray-700 transition"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Home
-          </button>
+          </button> */}
           <div>
             <h1 className="text-3xl font-bold">Chess Playground</h1>
             <p className="text-gray-400">
@@ -309,14 +309,14 @@ export default function PlaygroundPage() {
         <div className="flex space-x-2">
           <button
             onClick={() => setShowStylePanel(!showStylePanel)}
-            className="px-4 py-2 bg-purple-600 rounded-md hover:bg-purple-700 transition flex items-center"
+            className="px-3 py-2 bg-purple-600 rounded-md hover:bg-purple-700 transition flex items-center"
           >
             <Palette className="w-4 h-4 mr-2" />
             Styles
           </button>
           <button
             onClick={() => setShowSettings(!showSettings)}
-            className="px-4 py-2 bg-gray-800 rounded-md hover:bg-gray-700 transition flex items-center"
+            className="px-2 py-2 bg-gray-800 rounded-md hover:bg-gray-700 transition flex items-center"
           >
             <Settings className="w-4 h-4 mr-2" />
             Settings

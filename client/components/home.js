@@ -92,9 +92,9 @@ export default function Home() {
               PlayGround
             </button>
           </Link>
-          <button className="border border-gray-500 text-gray-200 hover:text-white px-4 py-2 rounded flex items-center">
+          {/* <button className="border border-gray-500 text-gray-200 hover:text-white px-4 py-2 rounded flex items-center">
             <Settings className="w-4 h-4 mr-2" /> Settings
-          </button>
+          </button> */}
         </div>
       </section>
 

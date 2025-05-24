@@ -162,6 +162,76 @@ app.get("/game/:gameId/status", async (req, res) => {
   }
 });
 
+//Admin games view Admin API- fetch all games
+app.get("/api/admin/games", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM games");
+    res.json({ games: result.rows });
+  } catch (err) {
+    console.error("Error fetching games:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+//Admin api - delete all game
+app.delete("/api/admin/games/:id", async (req, res) => {
+  const { id } = req.params;
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // First, delete chat messages
+    await client.query("DELETE FROM chat_messages WHERE game_id = $1", [id]);
+
+    // Then, delete the game
+    await client.query("DELETE FROM games WHERE game_id = $1", [id]);
+
+    await client.query("COMMIT");
+    res.json({
+      message: "Game and related chat messages deleted successfully",
+    });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("Error deleting game:", err);
+    res.status(500).json({ error: "Internal server error" });
+  } finally {
+    client.release();
+  }
+});
+
+//bulk delete
+app.delete("/api/admin/games", async (req, res) => {
+  const { ids } = req.body; // Array of UUIDs
+  if (!Array.isArray(ids))
+    return res.status(400).json({ error: "Invalid input" });
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Delete related messages
+    await client.query(
+      `DELETE FROM chat_messages WHERE game_id = ANY($1::uuid[])`,
+      [ids]
+    );
+
+    // Delete games
+    await client.query(`DELETE FROM games WHERE game_id = ANY($1::uuid[])`, [
+      ids,
+    ]);
+
+    await client.query("COMMIT");
+    res.json({ message: "Selected games and their messages deleted" });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("Error deleting multiple games:", err);
+    res.status(500).json({ error: "Internal server error" });
+  } finally {
+    client.release();
+  }
+});
+
 //Socket.io connections
 io.on("connection", (socket) => {
   console.log("A user connected: " + socket.id);
@@ -339,6 +409,43 @@ io.on("connection", (socket) => {
       io.to(gameId).emit("gameEnded", { winner, reason: "timeout" });
     } catch (error) {
       console.error("Error updating game result:", error);
+    }
+  });
+
+  // Add undo move request socket events
+  socket.on("requestUndoMove", async ({ gameId, requestingPlayer }) => {
+    // Broadcast undo request to opponent
+    socket.to(gameId).emit("undoMoveRequest", { requestingPlayer });
+  });
+
+  socket.on("respondToUndoMove", async ({ gameId, accepted, gameState }) => {
+    if (accepted && gameState) {
+      try {
+        // Update the game state in database with the previous position
+        await pool.query(
+          "UPDATE games SET fen = $1, turn = $2 WHERE game_id = $3",
+          [gameState.fen, gameState.turn, gameId]
+        );
+
+        // Remove the last move from move history
+        await pool.query(
+          "DELETE FROM moves WHERE game_id = $1 AND move_number = (SELECT MAX(move_number) FROM moves WHERE game_id = $1)",
+          [gameId]
+        );
+
+        // Broadcast the undo to all players
+        io.to(gameId).emit("moveUndone", {
+          newFen: gameState.fen,
+          newTurn: gameState.turn,
+          removedMove: gameState.lastMove,
+        });
+      } catch (error) {
+        console.error("Error processing undo move:", error);
+        socket.emit("undoMoveError", { message: "Failed to undo move" });
+      }
+    } else {
+      // Notify that undo was rejected
+      socket.to(gameId).emit("undoMoveRejected");
     }
   });
 

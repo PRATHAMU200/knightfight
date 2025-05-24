@@ -54,7 +54,7 @@ export default function Footer() {
           </div>
 
           {/* Community */}
-          <div>
+          {/* <div>
             <h3 className="font-semibold text-green-500 mb-2">Community</h3>
             <ul className="space-y-1 text-gray-400 text-sm">
               <li className="hover:text-green-400 cursor-pointer transition-colors">
@@ -67,7 +67,7 @@ export default function Footer() {
                 Clubs
               </li>
             </ul>
-          </div>
+          </div> */}
 
           {/* More */}
           <div>
@@ -90,34 +90,34 @@ export default function Footer() {
       {/* Bottom row */}
       <div className="mt-10 border-t border-green-700 pt-6 max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center text-gray-500 text-sm select-none">
         {/* Left copyright */}
-        <div>© 2023 KnightFight. All rights reserved.</div>
+        <div>© 2025 KnightFight by Prathamu200. All rights reserved.</div>
 
         {/* Right social icons */}
         <div className="flex space-x-6 mt-4 md:mt-0">
           {[
             {
-              href: "https://twitter.com/knightfight",
+              href: "https://twitter.com/mercykknight",
               label: "Twitter",
               svg: (
                 <path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z" />
               ),
             },
             {
-              href: "https://facebook.com/knightfight",
+              href: "https://facebook.com/mercykknight",
               label: "Facebook",
               svg: (
                 <path d="M22 12a10 10 0 10-11.62 9.87v-6.99H8.07v-2.88h2.31V9.42c0-2.28 1.37-3.55 3.47-3.55.99 0 2.02.18 2.02.18v2.23h-1.14c-1.12 0-1.47.7-1.47 1.42v1.7h2.5l-.4 2.88h-2.1v6.99A10 10 0 0022 12z" />
               ),
             },
             {
-              href: "https://instagram.com/knightfight",
+              href: "https://instagram.com/mercykknight",
               label: "Instagram",
               svg: (
                 <path d="M7.75 2h8.5A5.75 5.75 0 0122 7.75v8.5A5.75 5.75 0 0116.25 22h-8.5A5.75 5.75 0 012 16.25v-8.5A5.75 5.75 0 017.75 2zM12 7a5 5 0 100 10 5 5 0 000-10zm5.5-.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
               ),
             },
             {
-              href: "https://linkedin.com/company/knightfight",
+              href: "https://linkedin.com/u/prathamu200",
               label: "LinkedIn",
               svg: (
                 <path d="M19 3A2 2 0 0121 5v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h14zm-9 14v-6H7v6h3zm-1.5-7a1.75 1.75 0 110-3.5 1.75 1.75 0 010 3.5zM17 17v-3a2 2 0 00-4 0v3h3z" />

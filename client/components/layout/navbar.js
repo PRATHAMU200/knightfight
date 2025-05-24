@@ -37,7 +37,13 @@ export default function Navbar() {
             className="hover:text-white transition-colors"
             type="button"
           >
-            <a href="/">{item}</a>
+            <Link
+              key={item}
+              href={item === "Learn" || item === "Tools" ? "/playground" : "/"}
+              className="hover:text-white transition-colors"
+            >
+              {item}
+            </Link>
           </button>
         ))}
       </div>
@@ -85,9 +91,9 @@ export default function Navbar() {
             <button className="block w-full text-left px-4 py-2 hover:bg-gray-700">
               <a href="/profile">Profile</a>
             </button>
-            <button className="block w-full text-left px-4 py-2 hover:bg-gray-700">
+            {/* <button className="block w-full text-left px-4 py-2 hover:bg-gray-700">
               Logout
-            </button>
+            </button> */}
           </div>
         )}
       </div>

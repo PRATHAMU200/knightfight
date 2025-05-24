@@ -147,6 +147,14 @@ class SocketManager {
     this.emit("chatMessage", { gameId, user, text });
   }
 
+  requestUndoMove(gameId, requestingPlayer) {
+    this.emit("requestUndoMove", { gameId, requestingPlayer });
+  }
+
+  respondToUndoMove(gameId, accepted, gameState = null) {
+    this.emit("respondToUndoMove", { gameId, accepted, gameState });
+  }
+
   drawGame(gameId) {
     this.emit("drawGame", { gameId });
   }
