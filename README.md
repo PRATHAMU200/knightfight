@@ -10,19 +10,14 @@ A modern, full-stack, real-time multiplayer **chess platform** that supports pla
 ## 🖼️ Preview
 
 Here are some preview screenshots of **KnightFight**:
-![Chessboard](./assets/preview1.png)
-![Chessboard](./assets/preview2.png)
-![Chessboard](./assets/preview3.png)
-![Chessboard](./assets/preview4.png)
-![Chessboard](./assets/preview5.png)
 
 <p align="center">
-  <img src="./assets/preview1.png" width="300" alt="Preview 1"/>
-  <img src="./assets/preview2.png" width="300" alt="Preview 2"/>
+  <img src="./assets/preview1.png" width="500" alt="Preview 1"/>
+  <img src="./assets/preview2.png" width="500" alt="Preview 2"/>
 </p>
 <p align="center">
-  <img src="./assets/preview3.png" width="300" alt="Preview 3"/>
-  <img src="./assets/preview4.png" width="300" alt="Preview 4"/>
+  <img src="./assets/preview3.png" width="500" alt="Preview 3"/>
+  <img src="./assets/preview4.png" width="500" alt="Preview 4"/>
 </p>
 
 ## 🎯 Features
