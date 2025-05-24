@@ -17,6 +17,8 @@ import ChessBoard from "@/components/chessboard";
 import socketManager from "@/components/utils/socketManager";
 import { useToast } from "@/components/ui/toast";
 
+const serveruri = process.env.NEXT_PUBLIC_SERVER_API_URL;
+
 const BOARD_STYLES = {
   classic: {
     name: "Classic",
@@ -279,9 +281,7 @@ export default function GamePage() {
   useEffect(() => {
     const checkGameStatus = async () => {
       try {
-        const response = await fetch(
-          `http://localhost:3001/game/${gameId}/status`
-        );
+        const response = await fetch(`${serveruri}/game/${gameId}/status`);
         const data = await response.json();
         if (data.winner) {
           setGameEnded(true);
@@ -343,9 +343,7 @@ export default function GamePage() {
   useEffect(() => {
     const fetchGameInfo = async () => {
       try {
-        const response = await fetch(
-          `http://localhost:3001/game/${gameId}/status`
-        );
+        const response = await fetch(`${serveruri}/game/${gameId}/status`);
         const data = await response.json();
         setGameInfo({
           type: "Standard",

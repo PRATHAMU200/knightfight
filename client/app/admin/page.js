@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { Trash2, CheckSquare, XCircle } from "lucide-react";
-
+import dotenv from "dotenv";
+dotenv.config();
 export default function AdminPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [username, setUsername] = useState("");
@@ -12,12 +13,12 @@ export default function AdminPage() {
   const [selectedGames, setSelectedGames] = useState([]);
   const [stats, setStats] = useState({ totalGames: 0 });
 
-  const adminUser = "admin";
-  const adminPass = "admin123"; // Replace with env variable for production
-
+  const adminUser = process.env.NEXT_PUBLIC_ADMIN_USER;
+  const adminPass = process.env.NEXT_PUBLIC_ADMIN_PASS;
+  const serveruri = process.env.NEXT_PUBLIC_SERVER_API_URL;
   const fetchGames = async () => {
     try {
-      const res = await axios.get("http://localhost:3001/api/admin/games");
+      const res = await axios.get(serveruri + "/api/admin/games");
       setGames(res.data.games);
       setStats({ totalGames: res.data.games.length });
     } catch (err) {
@@ -43,14 +44,14 @@ export default function AdminPage() {
   };
 
   const deleteGame = async (gameId) => {
-    await axios.delete(`http://localhost:3001/api/admin/games/${gameId}`);
+    await axios.delete(serveruri + `/api/admin/games/${gameId}`);
     fetchGames();
   };
 
   const deleteSelected = async () => {
     await Promise.all(
       selectedGames.map((id) =>
-        axios.delete(`http://localhost:3001/api/admin/games/${id}`)
+        axios.delete(serveruri + `/api/admin/games/${id}`)
       )
     );
     setSelectedGames([]);

@@ -6,16 +6,18 @@ import { Pool } from "pg";
 import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import dotenv from "dotenv";
+dotenv.config();
 
 //Initialize the points
 const app = express();
-const port = 3001;
+const port = process.env.PORT;
 
 app.use(express.json());
 app.use(cookieParser());
 app.use(
   cors({
-    origin: "http://localhost:3000", // your React app origin
+    origin: process.env.CLIENT_ORIGIN, // your React app origin
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true, // if you send cookies/auth headers
   })
@@ -24,7 +26,7 @@ const server = createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: process.env.CLIENT_ORIGIN,
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -32,11 +34,11 @@ const io = new Server(server, {
 
 // PostgreSQL connection
 const pool = new Pool({
-  user: "postgres",
-  host: "localhost",
-  database: "testknight",
-  password: "root",
-  port: 5432,
+  user: process.env.PG_USER,
+  host: process.env.PG_HOST,
+  database: process.env.PG_DATABASE,
+  password: process.env.PG_PASSWORD,
+  port: Number(process.env.PG_PORT),
 });
 
 // Track game rooms and players
@@ -707,5 +709,5 @@ function switchTurn(gameId) {
 
 //At last server start
 server.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
+  console.log(`Server running on ${port}`);
 });

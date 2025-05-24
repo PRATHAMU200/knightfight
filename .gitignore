@@ -2,6 +2,8 @@
 
 # dependencies
 
+**/.env
+/ignore
 */node_modules
 /.pnp
 .pnp.*

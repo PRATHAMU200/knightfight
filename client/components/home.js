@@ -20,6 +20,7 @@ export default function Home() {
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
   const [publicGames, setPublicGames] = useState([]);
+  const serveruri = process.env.NEXT_PUBLIC_SERVER_API_URL;
 
   const startGame = async (gameOptions = {}) => {
     const defaultOptions = {
@@ -31,7 +32,7 @@ export default function Home() {
     };
 
     try {
-      const response = await fetch("http://localhost:3001/createnewgame", {
+      const response = await fetch(serveruri + "/createnewgame", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -54,7 +55,7 @@ export default function Home() {
 
   const fetchPublicGames = async () => {
     try {
-      const response = await fetch("http://localhost:3001/public-games");
+      const response = await fetch(serveruri + "/public-games");
       const games = await response.json();
       setPublicGames(games);
       console.log(games);

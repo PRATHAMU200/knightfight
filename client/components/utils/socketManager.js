@@ -1,6 +1,6 @@
 // utils/socketManager.js
 import { io } from "socket.io-client";
-
+const serveruri = process.env.NEXT_PUBLIC_SERVER_API_URL;
 class SocketManager {
   constructor() {
     this.socket = null;
@@ -22,7 +22,7 @@ class SocketManager {
       }
     }
 
-    this.socket = io("http://localhost:3001", {
+    this.socket = io(serveruri, {
       transports: ["websocket", "polling"],
     });
 

@@ -5,7 +5,7 @@ import { Chessboard } from "react-chessboard";
 import { Chess } from "chess.js";
 import socketManager from "@/components/utils/socketManager";
 import { useToast } from "@/components/ui/toast";
-
+const serveruri = process.env.NEXT_PUBLIC_SERVER_API_URL;
 export default function ChessBoard({
   gameId,
   forcedColor = null,
@@ -199,9 +199,7 @@ export default function ChessBoard({
       if (!gameId) return;
 
       try {
-        const response = await fetch(
-          `http://localhost:3001/game/${gameId}/status`
-        );
+        const response = await fetch(`${serveruri}/game/${gameId}/status`);
         const data = await response.json();
         setGameInfo(data);
 
