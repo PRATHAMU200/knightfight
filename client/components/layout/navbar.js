@@ -89,7 +89,7 @@ export default function Navbar() {
               Sign Up
             </button>
             <button className="block w-full text-left px-4 py-2 hover:bg-gray-700">
-              <a href="/profile">Profile</a>
+              <Link href="/profile">Profile</Link>
             </button>
             {/* <button className="block w-full text-left px-4 py-2 hover:bg-gray-700">
               Logout

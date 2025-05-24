@@ -48,7 +48,7 @@ export default function Profile() {
             <div className="bg-[#1c1c1c] p-2 rounded-lg">Knight Master</div>
             <div className="bg-[#1c1c1c] p-2 rounded-lg">10 Game Streak</div>
             <div className="bg-[#161616] p-2 rounded-lg text-gray-500">
-              Queen's Gambit
+              Queen&rsquo;s Gambit
             </div>
             <div className="bg-[#161616] p-2 rounded-lg text-gray-500">
               Checkmate Pro
@@ -110,8 +110,8 @@ export default function Profile() {
           <div className="text-4xl mb-2">🏅</div>
           <p className="text-lg font-semibold mb-1">No Games Yet</p>
           <p className="text-gray-400 mb-4">
-            You haven't played any games yet. Start a new game to begin your
-            chess journey.
+            You haven&apos;t played any games yet. Start a new game to begin
+            your chess journey.
           </p>
           <Button className="bg-green-600 hover:bg-green-700">
             + Play First Game

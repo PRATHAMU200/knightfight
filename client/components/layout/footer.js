@@ -124,7 +124,7 @@ export default function Footer() {
               ),
             },
           ].map(({ href, label, svg }) => (
-            <a
+            <Link
               key={label}
               href={href}
               target="_blank"
@@ -140,7 +140,7 @@ export default function Footer() {
               >
                 {svg}
               </svg>
-            </a>
+            </Link>
           ))}
         </div>
       </div>

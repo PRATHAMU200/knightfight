@@ -173,7 +173,9 @@ export default function Home() {
       <section>
         <h2 className="text-2xl font-bold mb-4">Your Active Games</h2>
         <div className="border border-gray-700 bg-transparent rounded p-6 flex flex-col items-center">
-          <p className="text-gray-400 mb-4">You don't have any active games</p>
+          <p className="text-gray-400 mb-4">
+            You don&apos;t have any active games
+          </p>
           <button
             onClick={() => setShowModal(true)}
             className="bg-[#20b155] text-white hover:brightness-110 border border-[#20b155] px-4 py-2 rounded"

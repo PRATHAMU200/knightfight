@@ -281,7 +281,7 @@ export default function ChessBoard({
       (turn === "w" && color !== "white") ||
       (turn === "b" && color !== "black")
     ) {
-      showToast("It's not your turn!", "warning");
+      showToast("It&apos;s not your turn!", "warning");
       return false;
     }
 
@@ -449,7 +449,7 @@ export default function ChessBoard({
             </h2>
             <p style={{ margin: "0 0 20px 0", fontSize: "18px" }}>
               {gameResult.winner === "draw"
-                ? "It's a Draw!"
+                ? "It&apos;s a Draw!"
                 : gameResult.winner === color
                 ? "You Won!"
                 : "You Lost!"}
@@ -647,7 +647,7 @@ export default function ChessBoard({
             </>
           ) : (
             <>
-              <span style={{ fontWeight: "bold" }}>Opponent's turn</span>
+              <span style={{ fontWeight: "bold" }}>Opponent&apos;s turn</span>
               <span
                 style={{
                   display: "inline-block",
