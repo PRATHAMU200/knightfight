@@ -107,14 +107,22 @@ export default function Chat({
           messages.map((msg, idx) => (
             <div
               key={idx}
-              className={`p-2 rounded-lg max-w-xs break-words ${
-                msg.user === playerName || msg.user === "You"
-                  ? "bg-green-600 text-white self-end ml-auto"
-                  : "bg-gray-700 text-gray-200 self-start mr-auto"
+              className={`p-2 rounded-lg break-words ${
+                msg.user === "System"
+                  ? "bg-yellow-600 text-black text-center mx-auto max-w-full border border-yellow-400"
+                  : msg.user === playerName || msg.user === "You"
+                  ? "bg-green-600 text-white self-end ml-auto max-w-xs"
+                  : "bg-gray-700 text-gray-200 self-start mr-auto max-w-xs"
               }`}
             >
-              <div className="text-xs opacity-75 mb-1">{msg.user}</div>
-              <div>{msg.text}</div>
+              {msg.user !== "System" && (
+                <div className="text-xs opacity-75 mb-1">{msg.user}</div>
+              )}
+              <div
+                className={msg.user === "System" ? "font-semibold text-sm" : ""}
+              >
+                {msg.text}
+              </div>
             </div>
           ))
         )}

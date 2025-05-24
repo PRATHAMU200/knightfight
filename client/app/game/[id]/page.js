@@ -7,6 +7,7 @@ import MoveHistory from "@/components/movehistory";
 import Chat from "@/components/chat";
 import ChessBoard from "@/components/chessboard";
 import socketManager from "@/components/utils/socketManager";
+import { useToast } from "@/components/ui/toast"; // Import the toast hook
 
 function PlayerCard({ player, color, isOnline = false, timeLeft }) {
   // Update player cards to show time:
@@ -65,7 +66,7 @@ export default function GamePage() {
       : choiceFromQuery === "spectator"
       ? "spectator"
       : "white";
-  console.log("So from here the color we get is : " + color);
+  //console.log("So from here the color we get is : " + color);
   const [moves, setMoves] = useState([]);
   const [playersOnline, setPlayersOnline] = useState(0);
   const [spectatorsOnline, setSpectatorsOnline] = useState(0);
@@ -77,6 +78,7 @@ export default function GamePage() {
 
   const [showShareDropdown, setShowShareDropdown] = useState(false);
   const [isSpectator, setIsSpectator] = useState(false);
+  const { showToast, ToastContainer } = useToast();
   // useEffect(() => {
   //   console.log("Timer values updated:", { whiteTime, blackTime });
   // }, [whiteTime, blackTime]);
@@ -189,12 +191,16 @@ export default function GamePage() {
   const copyShareLink = (role) => {
     const baseUrl = window.location.origin;
     const shareUrl = `${baseUrl}/game/${gameId}?choice=${role}`;
-    navigator.clipboard.writeText(shareUrl);
-    alert(
-      `${
-        role.charAt(0).toUpperCase() + role.slice(1)
-      } link copied to clipboard!`
-    );
+    navigator.clipboard
+      .writeText(shareUrl)
+      .then(() => {
+        const roleCapitalized = role.charAt(0).toUpperCase() + role.slice(1);
+
+        showToast(`${roleCapitalized} link copied to clipboard!`, "success");
+      })
+      .catch(() => {
+        showToast("Failed to copy link to clipboard", "error");
+      });
     setShowShareDropdown(false);
   };
 
@@ -215,11 +221,11 @@ export default function GamePage() {
           otherDetails: "Online Match",
         });
 
-        // if (data.time_limit) {
-        //   const timeInSeconds = data.time_limit * 60;
-        //   setWhiteTime(timeInSeconds);
-        //   setBlackTime(timeInSeconds);
-        // }
+        if (data.time_limit) {
+          const timeInSeconds = data.time_limit * 60;
+          setWhiteTime(timeInSeconds);
+          setBlackTime(timeInSeconds);
+        }
       } catch (error) {
         console.error("Error fetching game info:", error);
       }
@@ -265,8 +271,11 @@ export default function GamePage() {
 
   return (
     <div className="min-h-screen bg-black text-white p-6 flex flex-col space-y-6">
+      {/* Toast Container */}
+      <ToastContainer />
+
       {/* Header */}
-      <section className="flex justify-between items-center mb-6">
+      <section className="flex justify-between items-center mb-6 gap-1">
         <div>
           <h1 className="text-3xl font-bold">Live Chess</h1>
           <p className="text-gray-400">
@@ -281,39 +290,54 @@ export default function GamePage() {
         <div className="flex space-x-4">
           <a
             href="/"
-            className="px-4 py-2 bg-[#20b155] rounded-md font-semibold hover:brightness-110 transition"
+            className="hidden md:inline-flex px-4 py-2 bg-[#20b155] rounded-md font-semibold hover:brightness-110 transition"
           >
             <Plus className="inline-block mr-2 w-4 h-4" />
             New Game
           </a>
           <div className="relative">
-            <button
-              onClick={() => setShowShareDropdown(!showShareDropdown)}
-              className="px-4 py-2 border border-gray-600 rounded-md hover:bg-green-700 transition"
-            >
-              Share Game
-            </button>
-            {showShareDropdown && (
-              <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-600 rounded-md shadow-lg z-10">
+            {assignedColor !== "spectator" && (
+              <>
                 <button
-                  onClick={() => copyShareLink("white")}
-                  className="block w-full px-4 py-2 text-left hover:bg-gray-700"
+                  onClick={() => setShowShareDropdown(!showShareDropdown)}
+                  className="px-4 py-2 border border-gray-600 rounded-md hover:bg-green-700 transition"
                 >
-                  Share to White Player
+                  Share Game
                 </button>
-                <button
-                  onClick={() => copyShareLink("black")}
-                  className="block w-full px-4 py-2 text-left hover:bg-gray-700"
-                >
-                  Share to Black Player
-                </button>
-                <button
-                  onClick={() => copyShareLink("spectator")}
-                  className="block w-full px-4 py-2 text-left hover:bg-gray-700"
-                >
-                  Share to Spectator
-                </button>
-              </div>
+
+                {showShareDropdown && (
+                  <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-600 rounded-md shadow-lg z-10">
+                    <button
+                      onClick={() => copyShareLink("white")}
+                      className="block w-full px-4 py-2 text-left hover:bg-gray-700"
+                    >
+                      Share to White Player
+                    </button>
+                    <button
+                      onClick={() => copyShareLink("black")}
+                      className="block w-full px-4 py-2 text-left hover:bg-gray-700"
+                    >
+                      Share to Black Player
+                    </button>
+                    <button
+                      onClick={() => copyShareLink("spectator")}
+                      className="block w-full px-4 py-2 text-left hover:bg-gray-700"
+                    >
+                      Share to Spectator
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Only show spectator share button if assignedColor is spectator */}
+            {assignedColor === "spectator" && (
+              <button
+                onClick={() => copyShareLink("spectator")}
+                className="px-4 py-2 border border-gray-600 rounded-md hover:bg-green-700 transition"
+              >
+                Share to Spectator
+              </button>
             )}
           </div>
           <button className="px-4 py-2 border border-gray-600 rounded-md hover:bg-green-700 transition">

@@ -61,6 +61,10 @@ const initDb = async () => {
       move_history JSONB DEFAULT '[]',
       winner VARCHAR(10) DEFAULT NULL,
       is_private BOOLEAN DEFAULT false,
+      white_time INTEGER,
+      black_time INTEGER,
+      current_turn VARCHAR(5) DEFAULT 'white',
+      timer_started BOOLEAN DEFAULT false,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `);
@@ -239,27 +243,39 @@ io.on("connection", (socket) => {
       if (gameRoom.players.size === 2 && !gameRoom.gameStarted) {
         try {
           const gameResult = await pool.query(
-            "SELECT time_limit FROM games WHERE game_id = $1",
+            "SELECT time_limit, white_time, black_time, current_turn, timer_started FROM games WHERE game_id = $1",
             [gameId]
           );
 
           if (gameResult.rows.length > 0) {
-            const timeLimit = gameResult.rows[0].time_limit;
-            if (timeLimit) {
-              const timeInSeconds = timeLimit * 60;
-              gameRoom.timers = { white: timeInSeconds, black: timeInSeconds };
-              gameRoom.currentTurn = "white";
-              gameRoom.gameStarted = true;
+            const {
+              time_limit,
+              white_time,
+              black_time,
+              current_turn,
+              timer_started,
+            } = gameResult.rows[0];
+            if (time_limit) {
+              const timeInSeconds = time_limit * 60;
+              gameRoom.timers = {
+                white: white_time !== null ? white_time : timeInSeconds,
+                black: black_time !== null ? black_time : timeInSeconds,
+              };
+              gameRoom.currentTurn = current_turn || "white";
+              gameRoom.timerStarted = timer_started || false;
+              gameRoom.gameStarted = false;
 
-              // Start the timer
-              startGameTimer(gameId);
-
-              // Broadcast initial timer state
+              // Broadcast current timer state
               io.to(gameId).emit("timerUpdate", {
-                whiteTime: timeInSeconds,
-                blackTime: timeInSeconds,
-                currentTurn: "white",
+                whiteTime: gameRoom.timers.white,
+                blackTime: gameRoom.timers.black,
+                currentTurn: gameRoom.currentTurn,
               });
+
+              // Resume timer if it was already started
+              if (gameRoom.timerStarted) {
+                startGameTimer(gameId);
+              }
             }
           }
         } catch (error) {
@@ -355,6 +371,26 @@ io.on("connection", (socket) => {
     "moveMade",
     async ({ gameId, move, fen, isCheckmate, winner, currentTurn }) => {
       try {
+        const gameRoom = gameRooms.get(gameId);
+
+        // Start timer on first move
+        if (gameRoom && !gameRoom.timerStarted && gameRoom.timers) {
+          gameRoom.timerStarted = true;
+          startGameTimer(gameId);
+        }
+        // Save timer state to database
+        if (gameRoom && gameRoom.timers) {
+          await pool.query(
+            "UPDATE games SET white_time = $1, black_time = $2, current_turn = $3, timer_started = $4 WHERE game_id = $5",
+            [
+              gameRoom.timers.white,
+              gameRoom.timers.black,
+              gameRoom.currentTurn,
+              gameRoom.timerStarted,
+              gameId,
+            ]
+          );
+        }
         // Fetch and parse existing history
         const gameResult = await pool.query(
           "SELECT move_history FROM games WHERE game_id = $1",
@@ -372,6 +408,7 @@ io.on("connection", (socket) => {
         }
         // Switch turn for timer
         switchTurn(gameId);
+
         // Check if game ended due to checkmate
         if (isCheckmate && winner) {
           await pool.query("UPDATE games SET winner = $1 WHERE game_id = $2", [
@@ -451,9 +488,29 @@ io.on("connection", (socket) => {
         room.players.delete(socket.id);
         room.playerColors.delete(socket.id);
       }
-      // Stop timer if no players left
+
+      // Save timer state and stop timer when players disconnect
+      if (room.timers && room.players.size > 0) {
+        // Save current timer state to database before stopping
+        pool
+          .query(
+            "UPDATE games SET white_time = $1, black_time = $2, current_turn = $3, timer_started = $4 WHERE game_id = $5",
+            [
+              room.timers.white,
+              room.timers.black,
+              room.currentTurn,
+              room.timerStarted,
+              gameId,
+            ]
+          )
+          .catch(console.error);
+      }
+
+      stopGameTimer(gameId);
+
+      // Clean up game room if no players left
       if (room.players.size === 0) {
-        stopGameTimer(gameId);
+        gameRooms.delete(gameId);
       }
 
       if (room.spectators.has(socket.id)) {
@@ -472,10 +529,10 @@ io.on("connection", (socket) => {
 
 function startGameTimer(gameId) {
   const gameRoom = gameRooms.get(gameId);
-  if (!gameRoom || gameRoom.timerInterval) return;
+  if (!gameRoom || gameRoom.timerInterval || !gameRoom.timerStarted) return;
 
-  gameRoom.timerInterval = setInterval(() => {
-    if (!gameRoom.timers || !gameRoom.gameStarted) return;
+  gameRoom.timerInterval = setInterval(async () => {
+    if (!gameRoom.timers || !gameRoom.timerStarted) return;
 
     const currentPlayer = gameRoom.currentTurn;
     if (gameRoom.timers[currentPlayer] > 0) {
@@ -488,23 +545,33 @@ function startGameTimer(gameId) {
         currentTurn: gameRoom.currentTurn,
       });
 
+      // Save timer state every 10 seconds to reduce database load
+      if (gameRoom.timers[currentPlayer] % 10 === 0) {
+        try {
+          await pool.query(
+            "UPDATE games SET white_time = $1, black_time = $2 WHERE game_id = $3",
+            [gameRoom.timers.white, gameRoom.timers.black, gameId]
+          );
+        } catch (error) {
+          console.error("Error saving timer state:", error);
+        }
+      }
+
       // Check if time ran out
       if (gameRoom.timers[currentPlayer] <= 0) {
         clearInterval(gameRoom.timerInterval);
         const winner = currentPlayer === "white" ? "black" : "white";
 
-        // Update database
-        pool
-          .query("UPDATE games SET winner = $1 WHERE game_id = $2", [
+        // Update database with final result
+        try {
+          await pool.query("UPDATE games SET winner = $1 WHERE game_id = $2", [
             winner,
             gameId,
-          ])
-          .then(() => {
-            io.to(gameId).emit("gameEnded", { winner, reason: "timeout" });
-          })
-          .catch((error) =>
-            console.error("Error updating game result:", error)
-          );
+          ]);
+          io.to(gameId).emit("gameEnded", { winner, reason: "timeout" });
+        } catch (error) {
+          console.error("Error updating game result:", error);
+        }
       }
     }
   }, 1000);

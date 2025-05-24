@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Chessboard } from "react-chessboard";
 import { Chess } from "chess.js";
 import socketManager from "@/components/utils/socketManager";
+import { useToast } from "@/components/ui/toast";
 
 export default function ChessBoard({ gameId, forcedColor = null }) {
   const chess = useRef(new Chess());
@@ -22,6 +23,13 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
   const [whiteTime, setWhiteTime] = useState(null);
   const [blackTime, setBlackTime] = useState(null);
   const [gameInfo, setGameInfo] = useState(null);
+  const { showToast, ToastContainer } = useToast();
+
+  const playersOnlineRef = useRef(playersOnline);
+
+  useEffect(() => {
+    playersOnlineRef.current = playersOnline;
+  }, [playersOnline]);
 
   useEffect(() => {
     if (!gameId) return;
@@ -96,7 +104,7 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
     socketManager.on(
       "roomFull",
       () => {
-        alert("This game already has two players. Cannot join.");
+        showToast("This game already has two players. Cannot join.", "error");
       },
       "roomFull"
     );
@@ -122,7 +130,8 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
     socketManager.on(
       "drawRejected",
       () => {
-        alert("Your draw offer was rejected.");
+        //alert("Your draw offer was rejected.");
+        showToast("Your draw offer was rejected", "warning");
       },
       "drawRejected"
     );
@@ -152,10 +161,15 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
         const data = await response.json();
         setGameInfo(data);
 
+        // Set initial timer values for display
         if (data.time_limit && data.time_limit > 0) {
           const timeInSeconds = data.time_limit * 60;
           setWhiteTime(timeInSeconds);
           setBlackTime(timeInSeconds);
+        } else {
+          // Set to null for unlimited games
+          setWhiteTime(null);
+          setBlackTime(null);
         }
       } catch (error) {
         console.error("Error fetching game info:", error);
@@ -166,43 +180,57 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
   }, [gameId]);
 
   useEffect(() => {
-    if (!whiteTime || !blackTime || gameEnded || !gameInfo?.time_limit) return;
+    const handleTimerUpdate = ({ whiteTime, blackTime, currentTurn }) => {
+      setWhiteTime(whiteTime);
+      setBlackTime(blackTime);
+      // Don't update turn here as it's handled by move logic
+    };
 
-    const timer = setInterval(() => {
-      if (turn === "w") {
-        setWhiteTime((prev) => {
-          if (prev <= 1) {
-            socketManager.emit("timeUp", { gameId, loser: "white" });
-            return 0;
-          }
-          return prev - 1;
-        });
-      } else {
-        setBlackTime((prev) => {
-          if (prev <= 1) {
-            socketManager.emit("timeUp", { gameId, loser: "black" });
-            return 0;
-          }
-          return prev - 1;
-        });
-      }
-    }, 1000);
+    socketManager.on("timerUpdate", handleTimerUpdate, "timerUpdate");
 
-    return () => clearInterval(timer);
-  }, [turn, whiteTime, blackTime, gameEnded, gameId, gameInfo]);
+    return () => {
+      socketManager.off("timerUpdate");
+    };
+  }, []);
+
+  // useEffect(() => {
+  //   if (!whiteTime || !blackTime || gameEnded || !gameInfo?.time_limit) return;
+
+  //   const timer = setInterval(() => {
+  //     if (turn === "w") {
+  //       setWhiteTime((prev) => {
+  //         if (prev <= 1) {
+  //           socketManager.emit("timeUp", { gameId, loser: "white" });
+  //           return 0;
+  //         }
+  //         return prev - 1;
+  //       });
+  //     } else {
+  //       setBlackTime((prev) => {
+  //         if (prev <= 1) {
+  //           socketManager.emit("timeUp", { gameId, loser: "black" });
+  //           return 0;
+  //         }
+  //         return prev - 1;
+  //       });
+  //     }
+  //   }, 1000);
+
+  //   return () => clearInterval(timer);
+  // }, [turn, whiteTime, blackTime, gameEnded, gameId, gameInfo]);
 
   function onDrop(sourceSquare, targetSquare) {
     if (userRole === "spectator") {
-      alert("Spectators cannot make moves!");
+      showToast("Spectators cannot make moves!", "warning");
       return false;
     }
     if (!color) {
-      alert("Waiting for server to assign your color...");
+      showToast("Waiting for server to assign your color...", "info");
       return false;
     }
 
     if (gameEnded) {
-      alert("Game has ended!");
+      showToast("Game has ended!", "warning");
       return false;
     }
 
@@ -211,7 +239,7 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
       (turn === "w" && color !== "white") ||
       (turn === "b" && color !== "black")
     ) {
-      alert("It's not your turn!");
+      showToast("It's not your turn!", "warning");
       return false;
     }
 
@@ -223,7 +251,7 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
     });
 
     if (move === null) {
-      alert("Invalid move");
+      showToast("Invalid move", "error");
       return false;
     }
 
@@ -254,6 +282,10 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
       chess.current.turn()
     );
 
+    if (moves.length === 0) {
+      socketManager.emit("firstMove", gameId);
+    }
+
     return true;
   }
 
@@ -265,6 +297,12 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
 
     if (confirm("Are you sure you want to surrender?")) {
       socketManager.surrenderGame(gameId, color);
+      // Send system message to chat
+      socketManager.sendChatMessage(
+        gameId,
+        "System",
+        `${color === "white" ? "White" : "Black"} player surrendered`
+      );
       setGameEnded(true);
       setGameResult({
         winner: color === "white" ? "black" : "white",
@@ -279,7 +317,8 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
       return;
     }
     socketManager.emit("offerDraw", { gameId, offeringPlayer: color });
-    alert("Draw offer sent to opponent.");
+    //alert("Draw offer sent to opponent.");
+    showToast("Draw offer sent to opponent", "info");
   };
 
   const handleDrawResponse = (accepted) => {
@@ -292,7 +331,9 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
   };
 
   return (
-    <div style={{ maxWidth: 500, margin: "auto", position: "relative" }}>
+    // <div style={{ maxWidth: 500, margin: "auto", position: "relative" }}>
+    <div style={{ width: "100%", margin: "auto", position: "relative" }}>
+      <ToastContainer />
       {/* Game Result Overlay */}
       {gameEnded && gameResult && (
         <div
@@ -557,8 +598,19 @@ export default function ChessBoard({ gameId, forcedColor = null }) {
         position={fen}
         onPieceDrop={onDrop}
         boardOrientation={color || "white"}
-        arePiecesDraggable={!gameEnded}
-        boardWidth={480}
+        arePiecesDraggable={!gameEnded && userRole === "player"}
+        // boardWidth={480}
+        onPieceDragBegin={(sourceSquare, piece) => {
+          const canDrag =
+            playersOnlineRef.current === 2 &&
+            !gameEnded &&
+            userRole === "player";
+          if (!canDrag) {
+            //showToast("You cannot move the pieces.", "warning");
+            alert("You cannot start game alone");
+          }
+          return canDrag; // prevents drag if false
+        }}
       />
 
       {/* Moves History */}

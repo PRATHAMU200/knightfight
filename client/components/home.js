@@ -56,6 +56,7 @@ export default function Home() {
       const response = await fetch("http://localhost:3001/public-games");
       const games = await response.json();
       setPublicGames(games);
+      console.log(games);
     } catch (error) {
       console.error("Error fetching public games:", error);
     }
@@ -79,7 +80,7 @@ export default function Home() {
         </div>
         <div className="flex space-x-4">
           <button
-            className="bg-[#20b155] text-white hover:brightness-110 border border-[#20b155] px-4 py-2 rounded flex items-center"
+            className="bg-[#20b155] text-white hover:brightness-110 border border-[#20b155] px-3 py-2 rounded flex items-center"
             onClick={() => setShowModal(true)}
           >
             <PlayIcon className="w-4 h-4 mr-2" /> New Game
@@ -109,7 +110,7 @@ export default function Home() {
           <div className="space-x-2 flex justify-center ">
             <button
               onClick={() =>
-                startGame({ timeControl: "regular", time_limit: 1 })
+                startGame({ time_control: "regular", time_limit: 5 })
               }
               className="border border-gray-600 text-gray-300 px-3 py-1 rounded w-full"
             >
@@ -117,7 +118,7 @@ export default function Home() {
             </button>
             <button
               onClick={() =>
-                startGame({ timeControl: "regular", time_limit: 10 })
+                startGame({ time_control: "regular", time_limit: 10 })
               }
               className="border border-gray-600 text-gray-300 px-3 py-1 rounded w-full"
             >
@@ -126,7 +127,7 @@ export default function Home() {
             <button
               className="border border-gray-600 text-gray-300 px-3 py-1 rounded w-full"
               onClick={() =>
-                startGame({ timeControl: "regular", time_limit: 15 })
+                startGame({ time_control: "regular", time_limit: 15 })
               }
             >
               15 Min
@@ -170,7 +171,7 @@ export default function Home() {
         <div className="border border-gray-700 bg-transparent rounded p-6 flex flex-col items-center">
           <p className="text-gray-400 mb-4">You don't have any active games</p>
           <button
-            onClick={startGame}
+            onClick={() => setShowModal(true)}
             className="bg-[#20b155] text-white hover:brightness-110 border border-[#20b155] px-4 py-2 rounded"
           >
             Start a New Game
@@ -180,7 +181,7 @@ export default function Home() {
       {/* Section 4: Public Games */}
       <section>
         <h2 className="text-2xl font-bold mb-4">Join Public Games</h2>
-        <div className="space-y-3">
+        <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
           {publicGames.length === 0 ? (
             <div className="border border-gray-700 bg-transparent rounded p-6 text-center">
               <p className="text-gray-400">No public games available</p>
@@ -198,13 +199,29 @@ export default function Home() {
                       : `${game.time_limit} min`}{" "}
                     Game
                   </p>
-                  <p className="text-gray-400 text-sm">
-                    Players: {game.playercount}/2 • Created:{" "}
-                    {new Date(game.created_at).toLocaleTimeString()}
-                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    {game.white_player ? (
+                      <span className="text-white flex items-center gap-1">
+                        ♙ <span className="text-sm text-gray-400">White</span>
+                      </span>
+                    ) : (
+                      <span className="text-gray-600 flex items-center gap-1">
+                        ♙ <span className="text-sm text-gray-500">White</span>
+                      </span>
+                    )}
+                    {game.black_player ? (
+                      <span className="text-white flex items-center gap-1">
+                        ♟ <span className="text-sm text-gray-400">Black</span>
+                      </span>
+                    ) : (
+                      <span className="text-gray-600 flex items-center gap-1">
+                        ♟ <span className="text-sm text-gray-500">Black</span>
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="space-x-2">
-                  {game.playercount < 2 ? (
+                  {/* {game.playercount < 2 ? (
                     <button
                       onClick={() =>
                         router.push(`/game/${game.game_id}?choice=player`)
@@ -213,7 +230,15 @@ export default function Home() {
                     >
                       Join as Player
                     </button>
-                  ) : null}
+                  ) : (
+                    <button
+                      disabled
+                      className="bg-gray-600 text-gray-400 px-4 py-2 rounded cursor-not-allowed"
+                    >
+                      Full
+                    </button>
+                  )} */}
+
                   <button
                     onClick={() =>
                       router.push(`/game/${game.game_id}?choice=spectator`)
