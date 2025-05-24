@@ -14,6 +14,7 @@ import { useState, useEffect } from "react";
 
 import { v4 as uuidv4 } from "uuid";
 import GameModal from "@/components/gamemodal";
+import Link from "next/link";
 
 export default function Home() {
   const router = useRouter();
@@ -85,12 +86,12 @@ export default function Home() {
           >
             <PlayIcon className="w-4 h-4 mr-2" /> New Game
           </button>
-          <button
-            className="border border-gray-500 text-gray-200 hover:text-white px-4 py-2 rounded flex items-center"
-            onClick={() => startGame()}
-          >
-            <UserPlus className="w-4 h-4 mr-2" /> Play as Guest
-          </button>
+          <Link href={"/playground"}>
+            <button className="border border-gray-500 text-gray-200 hover:text-white px-4 py-2 rounded flex items-center">
+              <UserPlus className="w-4 h-4 mr-2" />
+              PlayGround
+            </button>
+          </Link>
           <button className="border border-gray-500 text-gray-200 hover:text-white px-4 py-2 rounded flex items-center">
             <Settings className="w-4 h-4 mr-2" /> Settings
           </button>
@@ -137,7 +138,7 @@ export default function Home() {
 
         <div className="border border-gray-700 bg-transparent rounded p-6">
           <span className="flex  items-center gap-2 mb-2">
-            <Crown className="h-5 w-5 text-cyan-500" />
+            <Trophy className="h-5 w-5 text-yellow-500" />
             <h2 className="text-xl font-bold">Standard Game</h2>
           </span>
           <p className="text-gray-400 mb-4">
@@ -153,15 +154,17 @@ export default function Home() {
 
         <div className="border border-gray-700 bg-transparent rounded p-6">
           <span className="flex  items-center gap-2 mb-2">
-            <Trophy className="h-5 w-5 text-yellow-500" />
-            <h2 className="text-xl font-bold">Ranked Match</h2>
+            <Crown className="h-5 w-5 text-cyan-500" />
+            <h2 className="text-xl font-bold">Play with Computer</h2>
           </span>
           <p className="text-gray-400 mb-4">
-            Competitive games that affect your rating
+            Learn by Practicing with Computer
           </p>
-          <button className="border border-gray-600 text-gray-300 px-4 py-2 rounded w-full">
-            Play Ranked
-          </button>
+          <Link href={"/playground"}>
+            <button className="border border-gray-600 text-gray-300 px-4 py-2 rounded w-full">
+              Practice Playground
+            </button>
+          </Link>
         </div>
       </section>
 
