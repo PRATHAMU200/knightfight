@@ -1,7 +1,7 @@
 "use client";
 
 import { Swords } from "lucide-react";
-
+import Link from "next/link";
 export default function Footer() {
   return (
     <footer className="bg-black bg-opacity-70 backdrop-blur-md text-gray-300 px-8 py-10 select-none mt-20">
