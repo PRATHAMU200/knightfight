@@ -398,9 +398,9 @@ export default function ChessBoard({
     if (userRole === "spectator") return;
 
     let gameState = null;
-    console.log("Draw accepted");
+    console.log("Undo accepted");
     if (accepted && gameHistory.length > 1) {
-      console.log("Draw accepted got here");
+      console.log("Undo got here");
       // Get the previous game state (before the last move)
       gameState = gameHistory[gameHistory.length - 2];
       gameState.gameId = gameId;

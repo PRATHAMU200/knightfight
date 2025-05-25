@@ -26,7 +26,9 @@ export default function Navbar() {
       {/* Left Section */}
       <Link href={"/"} className="flex items-center space-x-3">
         <Swords className="text-primary h-8 w-8" color="#20b155" />
-        <span className="font-bold text-xl select-none">KnightFight</span>
+        <span className="font-bold text-xl select-none bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+          KnightFight
+        </span>
       </Link>
 
       {/* Center Section: Navigation Tabs */}

@@ -7,19 +7,6 @@ A modern, full-stack, real-time multiplayer **chess platform** that supports pla
 
 ---
 
-## 🖼️ Preview
-
-Here are some preview screenshots of **KnightFight**:
-
-<p align="center">
-  <img src="./assets/preview1.png" width="500" alt="Preview 1"/>
-  <img src="./assets/preview2.png" width="500" alt="Preview 2"/>
-</p>
-<p align="center">
-  <img src="./assets/preview3.png" width="500" alt="Preview 3"/>
-  <img src="./assets/preview4.png" width="500" alt="Preview 4"/>
-</p>
-
 ## 🎯 Features
 
 - ✅ **Guest Play Only** – Jump into the game instantly without signing in
@@ -131,6 +118,19 @@ knightfight/
 
 ---
 
+## 🖼️ Preview
+
+Here are some preview screenshots of **KnightFight**:
+
+<p align="center">
+  <img src="./assets/preview1.png" width="200" alt="Preview 1"/>
+  <img src="./assets/preview2.png" width="200" alt="Preview 2"/>
+</p>
+<p align="center">
+  <img src="./assets/preview3.png" width="200" alt="Preview 3"/>
+  <img src="./assets/preview4.png" width="200" alt="Preview 4"/>
+</p>
+---
 ## 🤝 Contributing
 
 Contributions are welcome! Open an issue or create a pull request. Let's build a better chess world together 🧠

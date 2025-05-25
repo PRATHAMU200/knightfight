@@ -123,19 +123,29 @@ app.post("/createnewgame", async (req, res) => {
 app.get("/public-games", async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT game_id, time_control, time_limit, created_at 
+      SELECT game_id, time_control, time_limit, created_at, winner
       FROM games 
       WHERE is_private = false AND winner IS NULL 
       ORDER BY created_at DESC
     `);
 
-    // Add player count for each game
+    // Add player count and availability for each game
     const gamesWithPlayerCount = result.rows.map((game) => {
       const gameRoom = gameRooms.get(game.game_id);
       const playerCount = gameRoom ? gameRoom.players.size : 0;
+      const availableSlots = Math.max(0, 2 - playerCount);
+
       return {
         ...game,
         playerCount,
+        availableSlots,
+        canJoin: playerCount < 2,
+        hasWhite: gameRoom
+          ? Array.from(gameRoom.playerColors.values()).includes("white")
+          : false,
+        hasBlack: gameRoom
+          ? Array.from(gameRoom.playerColors.values()).includes("black")
+          : false,
       };
     });
 
@@ -415,32 +425,36 @@ io.on("connection", (socket) => {
   });
 
   // Add undo move request socket events
-  socket.on("requestUndoMove", async ({ gameId, requestingPlayer }) => {
-    // Broadcast undo request to opponent
-    socket.to(gameId).emit("undoMoveRequest", { requestingPlayer });
-  });
-
   socket.on("respondToUndoMove", async ({ gameId, accepted, gameState }) => {
     if (accepted && gameState) {
       try {
-        // Update the game state in database with the previous position
-        await pool.query(
-          "UPDATE games SET fen = $1, turn = $2 WHERE game_id = $3",
-          [gameState.fen, gameState.turn, gameId]
-        );
-
-        // Remove the last move from move history
-        await pool.query(
-          "DELETE FROM moves WHERE game_id = $1 AND move_number = (SELECT MAX(move_number) FROM moves WHERE game_id = $1)",
+        // Get current move history
+        const result = await pool.query(
+          "SELECT move_history FROM games WHERE game_id = $1",
           [gameId]
         );
 
-        // Broadcast the undo to all players
-        io.to(gameId).emit("moveUndone", {
-          newFen: gameState.fen,
-          newTurn: gameState.turn,
-          removedMove: gameState.lastMove,
-        });
+        if (result.rows.length > 0) {
+          let moveHistory = result.rows[0].move_history || [];
+
+          // Remove the last move if history exists
+          if (moveHistory.length > 0) {
+            moveHistory.pop();
+
+            // Update the move history in database
+            await pool.query(
+              "UPDATE games SET move_history = $1 WHERE game_id = $2",
+              [JSON.stringify(moveHistory), gameId]
+            );
+
+            // Broadcast the undo to all players
+            io.to(gameId).emit("moveUndone", {
+              newFen: gameState.fen,
+              newTurn: gameState.turn,
+              removedMove: gameState.lastMove,
+            });
+          }
+        }
       } catch (error) {
         console.error("Error processing undo move:", error);
         socket.emit("undoMoveError", { message: "Failed to undo move" });
