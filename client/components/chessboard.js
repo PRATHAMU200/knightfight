@@ -5,6 +5,9 @@ import { Chessboard } from "react-chessboard";
 import { Chess } from "chess.js";
 import socketManager from "@/components/utils/socketManager";
 import { useToast } from "@/components/ui/toast";
+import { updateUserStats, getUser } from "@/components/utils/authUtils";
+import dotenv from "dotenv";
+dotenv.config();
 const serveruri = process.env.NEXT_PUBLIC_SERVER_API_URL;
 export default function ChessBoard({
   gameId,
@@ -12,6 +15,7 @@ export default function ChessBoard({
   boardStyle = null,
 }) {
   const chess = useRef(new Chess());
+  const [currentUser, setCurrentUser] = useState(null);
   const [fen, setFen] = useState(chess.current.fen());
   const [turn, setTurn] = useState("w");
   const [moves, setMoves] = useState([]);
@@ -37,6 +41,13 @@ export default function ChessBoard({
   useEffect(() => {
     playersOnlineRef.current = playersOnline;
   }, [playersOnline]);
+
+  useEffect(() => {
+    const user = getUser();
+    if (user) {
+      setCurrentUser(user);
+    }
+  }, []);
 
   useEffect(() => {
     if (!gameId) return;
@@ -118,9 +129,13 @@ export default function ChessBoard({
 
     socketManager.on(
       "gameEnded",
-      ({ winner, reason }) => {
+      async ({ winner, reason }) => {
+        const result = { winner, reason: reason || "game_over" };
         setGameEnded(true);
-        setGameResult({ winner, reason: reason || "game_over" });
+        setGameResult(result);
+
+        // Update user stats
+        await updateGameStats(result);
       },
       "gameEnded"
     );
@@ -235,6 +250,21 @@ export default function ChessBoard({
     };
   }, []);
 
+  useEffect(() => {
+    const handleDrawAccepted = async () => {
+      const result = { winner: "draw", reason: "agreement" };
+      setGameEnded(true);
+      setGameResult(result);
+      await updateGameStats(result);
+    };
+
+    socketManager.on("drawAccepted", handleDrawAccepted, "drawAccepted");
+
+    return () => {
+      socketManager.off("drawAccepted");
+    };
+  }, [color, currentUser, userRole]);
+
   // useEffect(() => {
   //   if (!whiteTime || !blackTime || gameEnded || !gameInfo?.time_limit) return;
 
@@ -323,6 +353,13 @@ export default function ChessBoard({
     } else if (isStalemate) {
       winner = "draw";
     }
+    if (isCheckmate || isStalemate) {
+      const result = {
+        winner,
+        reason: isCheckmate ? "checkmate" : "stalemate",
+      };
+      setTimeout(() => updateGameStats(result), 100);
+    }
 
     // Emit move to server
     socketManager.makeMove(
@@ -341,13 +378,18 @@ export default function ChessBoard({
     return true;
   }
 
-  const handleSurrender = () => {
+  const handleSurrender = async () => {
     if (gameEnded) return;
     if (userRole === "spectator") {
       return;
     }
 
     if (confirm("Are you sure you want to surrender?")) {
+      const result = {
+        winner: color === "white" ? "black" : "white",
+        reason: "surrender",
+      };
+
       socketManager.surrenderGame(gameId, color);
       // Send system message to chat
       socketManager.sendChatMessage(
@@ -356,10 +398,10 @@ export default function ChessBoard({
         `${color === "white" ? "White" : "Black"} player surrendered`
       );
       setGameEnded(true);
-      setGameResult({
-        winner: color === "white" ? "black" : "white",
-        reason: "surrender",
-      });
+      setGameResult(result);
+
+      // Update user stats
+      await updateGameStats(result);
     }
   };
 
@@ -410,6 +452,26 @@ export default function ChessBoard({
     socketManager.respondToUndoMove(gameId, accepted, gameState);
     setShowUndoRequest(false);
     setUndoRequestingPlayer(null);
+  };
+
+  const updateGameStats = async (gameResult) => {
+    if (!currentUser || userRole === "spectator") return;
+
+    try {
+      let result;
+      if (gameResult.winner === "draw") {
+        result = "draw";
+      } else if (gameResult.winner === color) {
+        result = "win";
+      } else {
+        result = "loss";
+      }
+
+      await updateUserStats(result);
+      console.log("User stats updated:", result);
+    } catch (error) {
+      console.error("Error updating user stats:", error);
+    }
   };
 
   return (

@@ -8,13 +8,14 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import dotenv from "dotenv";
 dotenv.config();
+import authRoutes from "./auth.mjs";
 
 //Initialize the points
 const app = express();
 const port = process.env.PORT;
 
 app.use(express.json());
-app.use(cookieParser());
+
 app.use(
   cors({
     origin: process.env.CLIENT_ORIGIN, // your React app origin
@@ -22,6 +23,9 @@ app.use(
     credentials: true, // if you send cookies/auth headers
   })
 );
+// Authentication route
+app.use("/api/auth", authRoutes);
+app.use(cookieParser());
 const server = createServer(app);
 
 const io = new Server(server, {
@@ -89,6 +93,25 @@ const initDb = async () => {
       sender TEXT,
       message TEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+  // Add this to your existing initDb function in server.js
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      email VARCHAR(255) UNIQUE NOT NULL,
+      username VARCHAR(50) UNIQUE NOT NULL,
+      password VARCHAR(255) NOT NULL,
+      name VARCHAR(100) NOT NULL,
+      bio TEXT DEFAULT '',
+      total_games INTEGER DEFAULT 0,
+      wins INTEGER DEFAULT 0,
+      losses INTEGER DEFAULT 0,
+      draws INTEGER DEFAULT 0,
+      rating INTEGER DEFAULT 1200,
+      badge VARCHAR(50) DEFAULT 'beginner',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      last_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `);
 };
