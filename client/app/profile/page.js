@@ -12,6 +12,7 @@ import {
   Star,
   TrendingUp,
   Award,
+  Crown,
 } from "lucide-react";
 const serveruri = process.env.NEXT_PUBLIC_SERVER_API_URL;
 const ProfilePage = () => {
@@ -209,42 +210,54 @@ const ProfilePage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-black text-white p-6">
+      <div className="max-w-6xl mx-auto">
         {/* Message */}
         {message.text && (
           <div
-            className={`mb-6 p-4 rounded-lg flex items-center gap-3 ${
+            className={`mb-6 p-4 rounded-xl border flex items-center gap-3 ${
               message.type === "success"
-                ? "bg-green-900/50 border border-green-500 text-green-300"
-                : "bg-red-900/50 border border-red-500 text-red-300"
+                ? "bg-green-500/10 border-green-500/30 text-green-400"
+                : "bg-red-500/10 border-red-500/30 text-red-400"
             }`}
           >
-            <span>{message.text}</span>
+            <span className="font-medium">{message.text}</span>
           </div>
         )}
 
+        {/* Header */}
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+              Player Profile
+            </h1>
+            <p className="text-gray-400 mt-2">
+              Manage your chess profile and view your statistics
+            </p>
+          </div>
+        </div>
+
         {/* Profile Header */}
-        <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-8 mb-6 border border-slate-700">
-          <div className="flex flex-col md:flex-row items-start gap-6">
+        <div className="bg-gray-800 rounded-xl p-8 mb-6 border border-gray-700">
+          <div className="flex flex-col lg:flex-row items-start gap-8">
             {/* Avatar */}
             <div className="flex-shrink-0">
-              <div className="w-24 h-24 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center text-3xl font-bold text-white">
+              <div className="w-32 h-32 bg-gradient-to-r from-blue-400 to-purple-500 rounded-2xl flex items-center justify-center text-4xl font-bold text-white shadow-lg">
                 {user.name.charAt(0).toUpperCase()}
               </div>
             </div>
 
             {/* User Info */}
-            <div className="flex-grow">
-              <div className="flex items-center gap-3 mb-2">
+            <div className="flex-grow w-full">
+              <div className="flex items-center gap-4 mb-4">
                 {!editMode ? (
                   <>
-                    <h1 className="text-3xl font-bold text-white">
+                    <h2 className="text-3xl font-bold text-white">
                       {user.name}
-                    </h1>
+                    </h2>
                     <button
                       onClick={handleEdit}
-                      className="p-2 text-gray-400 hover:text-white hover:bg-slate-700 rounded-lg transition-all"
+                      className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-all"
                       title="Edit Profile"
                     >
                       <Edit2 size={20} />
@@ -261,20 +274,20 @@ const ProfilePage = () => {
                           name: e.target.value,
                         }))
                       }
-                      className="text-2xl font-bold bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-purple-500 focus:outline-none flex-grow"
+                      className="text-2xl font-bold bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none flex-grow"
                       placeholder="Your name"
                     />
                     <button
                       onClick={handleSave}
                       disabled={saving}
-                      className="p-2 text-green-400 hover:text-green-300 hover:bg-slate-700 rounded-lg transition-all disabled:opacity-50"
+                      className="p-2 text-green-400 hover:text-green-300 hover:bg-gray-700 rounded-lg transition-all disabled:opacity-50"
                       title="Save Changes"
                     >
                       <Save size={20} />
                     </button>
                     <button
                       onClick={handleCancel}
-                      className="p-2 text-red-400 hover:text-red-300 hover:bg-slate-700 rounded-lg transition-all"
+                      className="p-2 text-red-400 hover:text-red-300 hover:bg-gray-700 rounded-lg transition-all"
                       title="Cancel"
                     >
                       <X size={20} />
@@ -283,60 +296,73 @@ const ProfilePage = () => {
                 )}
               </div>
 
-              <p className="text-purple-400 text-lg mb-2">@{user.username}</p>
-              <p className="text-gray-400 mb-4">{user.email}</p>
+              <div className="flex flex-col lg:flex-row lg:items-center gap-4 mb-6">
+                <p className="text-blue-400 text-xl font-semibold">
+                  @{user.username}
+                </p>
+                <p className="text-gray-400">{user.email}</p>
+              </div>
 
-              {/* Badge */}
-              <div className="flex items-center gap-2">
-                <Award className="w-5 h-5 text-yellow-500" />
-                <span
-                  className={`px-3 py-1 rounded-full text-white text-sm font-semibold ${getBadgeColor(
-                    user.badge
-                  )}`}
-                >
-                  {user.badge.charAt(0).toUpperCase() + user.badge.slice(1)}
-                </span>
-                <span className="text-gray-400 text-sm">•</span>
-                <span className="text-gray-400 text-sm">
-                  Rating: {user.rating}
-                </span>
+              {/* Badge and Rating */}
+              <div className="flex items-center gap-4 mb-6">
+                <div className="flex items-center gap-2">
+                  <Crown className="w-5 h-5 text-yellow-500" />
+                  <span
+                    className={`px-4 py-2 rounded-lg text-white font-semibold ${getBadgeColor(
+                      user.badge
+                    )}`}
+                  >
+                    {user.badge.charAt(0).toUpperCase() + user.badge.slice(1)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Award className="w-5 h-5 text-purple-400" />
+                  <span className="text-purple-400 font-bold text-lg">
+                    Rating: {user.rating}
+                  </span>
+                </div>
+              </div>
+
+              {/* Bio Section */}
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-3">About</h3>
+                {!editMode ? (
+                  <p className="text-gray-300 leading-relaxed">
+                    {user.bio || "No bio added yet. Click edit to add one!"}
+                  </p>
+                ) : (
+                  <div>
+                    <textarea
+                      value={editData.bio}
+                      onChange={(e) =>
+                        setEditData((prev) => ({
+                          ...prev,
+                          bio: e.target.value,
+                        }))
+                      }
+                      placeholder="Tell us about yourself..."
+                      className="w-full bg-gray-700 text-white px-4 py-3 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none resize-none"
+                      rows="4"
+                      maxLength="500"
+                    />
+                    <p className="text-gray-400 text-sm mt-2">
+                      {editData.bio.length}/500 characters
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-
-          {/* Bio Section */}
-          <div className="mt-6 pt-6 border-t border-slate-700">
-            <h3 className="text-lg font-semibold text-white mb-3">Bio</h3>
-            {!editMode ? (
-              <p className="text-gray-300 leading-relaxed">
-                {user.bio || "No bio added yet. Click edit to add one!"}
-              </p>
-            ) : (
-              <textarea
-                value={editData.bio}
-                onChange={(e) =>
-                  setEditData((prev) => ({ ...prev, bio: e.target.value }))
-                }
-                placeholder="Tell us about yourself..."
-                className="w-full bg-slate-700 text-white px-4 py-3 rounded-lg border border-slate-600 focus:border-purple-500 focus:outline-none resize-none"
-                rows="4"
-                maxLength="500"
-              />
-            )}
-            {editMode && (
-              <p className="text-gray-400 text-sm mt-2">
-                {editData.bio.length}/500 characters
-              </p>
-            )}
           </div>
         </div>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           {/* Total Games */}
-          <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700">
-            <div className="flex items-center gap-3 mb-2">
-              <Target className="w-8 h-8 text-blue-400" />
+          <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-blue-500/20 rounded-lg">
+                <Target className="w-6 h-6 text-blue-400" />
+              </div>
               <h3 className="text-lg font-semibold text-white">Total Games</h3>
             </div>
             <p className="text-3xl font-bold text-blue-400">
@@ -345,27 +371,33 @@ const ProfilePage = () => {
           </div>
 
           {/* Wins */}
-          <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700">
-            <div className="flex items-center gap-3 mb-2">
-              <Trophy className="w-8 h-8 text-green-400" />
+          <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-green-500/20 rounded-lg">
+                <Trophy className="w-6 h-6 text-green-400" />
+              </div>
               <h3 className="text-lg font-semibold text-white">Wins</h3>
             </div>
             <p className="text-3xl font-bold text-green-400">{user.wins}</p>
           </div>
 
           {/* Losses */}
-          <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700">
-            <div className="flex items-center gap-3 mb-2">
-              <X className="w-8 h-8 text-red-400" />
+          <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-red-500/20 rounded-lg">
+                <X className="w-6 h-6 text-red-400" />
+              </div>
               <h3 className="text-lg font-semibold text-white">Losses</h3>
             </div>
             <p className="text-3xl font-bold text-red-400">{user.losses}</p>
           </div>
 
           {/* Win Rate */}
-          <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700">
-            <div className="flex items-center gap-3 mb-2">
-              <TrendingUp className="w-8 h-8 text-purple-400" />
+          <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-purple-500/20 rounded-lg">
+                <TrendingUp className="w-6 h-6 text-purple-400" />
+              </div>
               <h3 className="text-lg font-semibold text-white">Win Rate</h3>
             </div>
             <p className="text-3xl font-bold text-purple-400">
@@ -375,33 +407,39 @@ const ProfilePage = () => {
         </div>
 
         {/* Additional Stats */}
-        <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-700">
-          <h3 className="text-xl font-bold text-white mb-4">
-            Additional Stats
+        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+          <h3 className="text-xl font-bold text-white mb-6">
+            Additional Statistics
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Star className="w-5 h-5 text-yellow-400" />
-                <span className="text-gray-300">Draws</span>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="text-center">
+              <div className="flex justify-center mb-3">
+                <div className="p-4 bg-yellow-500/20 rounded-lg">
+                  <Star className="w-8 h-8 text-yellow-400" />
+                </div>
               </div>
-              <p className="text-2xl font-bold text-yellow-400">{user.draws}</p>
+              <span className="text-gray-300 block mb-2">Draws</span>
+              <p className="text-3xl font-bold text-yellow-400">{user.draws}</p>
             </div>
 
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <TrendingUp className="w-5 h-5 text-blue-400" />
-                <span className="text-gray-300">Rating</span>
+            <div className="text-center">
+              <div className="flex justify-center mb-3">
+                <div className="p-4 bg-blue-500/20 rounded-lg">
+                  <TrendingUp className="w-8 h-8 text-blue-400" />
+                </div>
               </div>
-              <p className="text-2xl font-bold text-blue-400">{user.rating}</p>
+              <span className="text-gray-300 block mb-2">Current Rating</span>
+              <p className="text-3xl font-bold text-blue-400">{user.rating}</p>
             </div>
 
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Calendar className="w-5 h-5 text-purple-400" />
-                <span className="text-gray-300">Member Since</span>
+            <div className="text-center">
+              <div className="flex justify-center mb-3">
+                <div className="p-4 bg-purple-500/20 rounded-lg">
+                  <Calendar className="w-8 h-8 text-purple-400" />
+                </div>
               </div>
-              <p className="text-lg font-semibold text-purple-400">
+              <span className="text-gray-300 block mb-2">Member Since</span>
+              <p className="text-xl font-bold text-purple-400">
                 {formatDate(user.created_at)}
               </p>
             </div>

@@ -268,7 +268,33 @@ export default function ChessBoard({
     return () => {
       socketManager.off("drawAccepted");
     };
-  }, [color, userRole]);
+  }, [color, currentUser, userRole]);
+
+  // useEffect(() => {
+  //   if (!whiteTime || !blackTime || gameEnded || !gameInfo?.time_limit) return;
+
+  //   const timer = setInterval(() => {
+  //     if (turn === "w") {
+  //       setWhiteTime((prev) => {
+  //         if (prev <= 1) {
+  //           socketManager.emit("timeUp", { gameId, loser: "white" });
+  //           return 0;
+  //         }
+  //         return prev - 1;
+  //       });
+  //     } else {
+  //       setBlackTime((prev) => {
+  //         if (prev <= 1) {
+  //           socketManager.emit("timeUp", { gameId, loser: "black" });
+  //           return 0;
+  //         }
+  //         return prev - 1;
+  //       });
+  //     }
+  //   }, 1000);
+
+  //   return () => clearInterval(timer);
+  // }, [turn, whiteTime, blackTime, gameEnded, gameId, gameInfo]);
 
   function onDrop(sourceSquare, targetSquare) {
     if (userRole === "spectator") {
@@ -337,7 +363,7 @@ export default function ChessBoard({
         winner,
         reason: isCheckmate ? "checkmate" : "stalemate",
       };
-      setTimeout(async () => updateGameStats(result), 100);
+      setTimeout(() => updateGameStats(result), 100);
     }
 
     // Emit move to server
@@ -435,9 +461,7 @@ export default function ChessBoard({
 
   const updateGameStats = async (gameResult) => {
     // Only update stats for authenticated users who are players
-    const freshUser = getUser();
-    console.log("Current user is  this---->", freshUser);
-    if (!freshUser || userRole === "spectator" || !freshUser.id) {
+    if (!currentUser || userRole === "spectator" || !currentUser.id) {
       console.log("Skipping stats update - no authenticated user or spectator");
       return;
     }
@@ -454,7 +478,7 @@ export default function ChessBoard({
 
       console.log(
         "Updating stats for user:",
-        freshUser.username,
+        currentUser.username,
         "Result:",
         result
       );
@@ -507,7 +531,7 @@ export default function ChessBoard({
             </h2>
             <p style={{ margin: "0 0 20px 0", fontSize: "18px" }}>
               {gameResult.winner === "draw"
-                ? "It is a Draw!"
+                ? "It&apos;s a Draw!"
                 : gameResult.winner === color
                 ? "You Won!"
                 : "You Lost!"}

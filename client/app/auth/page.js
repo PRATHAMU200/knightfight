@@ -174,30 +174,30 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="mx-auto w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mb-4">
-            <div className="text-2xl">♛</div>
+          <div className="mx-auto w-20 h-20 bg-gradient-to-r from-blue-400 to-purple-500 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
+            <div className="text-3xl">♛</div>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">
-            {isLogin ? "Welcome Back" : "Join the Game"}
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent mb-3">
+            {isLogin ? "Welcome Back" : "Join Chess Arena"}
           </h1>
-          <p className="text-slate-400">
+          <p className="text-gray-400 text-lg">
             {isLogin
-              ? "Sign in to your chess account"
-              : "Create your chess account"}
+              ? "Sign in to continue your chess journey"
+              : "Create your account and start playing"}
           </p>
         </div>
 
         {/* Message */}
         {message.text && (
           <div
-            className={`mb-6 p-4 rounded-lg flex items-center gap-3 ${
+            className={`mb-6 p-4 rounded-xl border flex items-center gap-3 ${
               message.type === "success"
-                ? "bg-green-900/50 border border-green-500 text-green-300"
-                : "bg-red-900/50 border border-red-500 text-red-300"
+                ? "bg-green-500/10 border-green-500/30 text-green-400"
+                : "bg-red-500/10 border-red-500/30 text-red-400"
             }`}
           >
             {message.type === "success" ? (
@@ -205,80 +205,89 @@ const AuthPage = () => {
             ) : (
               <AlertCircle size={20} />
             )}
-            <span>{message.text}</span>
+            <span className="font-medium">{message.text}</span>
           </div>
         )}
 
         {/* Form */}
-        <div className="space-y-4">
+        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 space-y-5">
           {!isLogin && (
             <>
               {/* Name Field */}
               <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Full Name
+                </label>
                 <div className="relative">
                   <User
-                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
+                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
                     size={20}
                   />
                   <input
                     type="text"
                     name="name"
-                    placeholder="Full Name"
+                    placeholder="Enter your full name"
                     value={formData.name}
                     onChange={handleInputChange}
-                    className={`w-full bg-slate-800/50 border ${
-                      errors.name ? "border-red-500" : "border-slate-600"
-                    } rounded-lg py-3 px-12 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all`}
+                    className={`w-full bg-gray-700 border ${
+                      errors.name ? "border-red-500" : "border-gray-600"
+                    } rounded-lg py-3 px-12 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all`}
                   />
                 </div>
                 {errors.name && (
-                  <p className="text-red-400 text-sm mt-1">{errors.name}</p>
+                  <p className="text-red-400 text-sm mt-2">{errors.name}</p>
                 )}
               </div>
 
               {/* Email Field */}
               <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Email Address
+                </label>
                 <div className="relative">
                   <Mail
-                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
+                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
                     size={20}
                   />
                   <input
                     type="email"
                     name="email"
-                    placeholder="Email Address"
+                    placeholder="Enter your email"
                     value={formData.email}
                     onChange={handleInputChange}
-                    className={`w-full bg-slate-800/50 border ${
-                      errors.email ? "border-red-500" : "border-slate-600"
-                    } rounded-lg py-3 px-12 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all`}
+                    className={`w-full bg-gray-700 border ${
+                      errors.email ? "border-red-500" : "border-gray-600"
+                    } rounded-lg py-3 px-12 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all`}
                   />
                 </div>
                 {errors.email && (
-                  <p className="text-red-400 text-sm mt-1">{errors.email}</p>
+                  <p className="text-red-400 text-sm mt-2">{errors.email}</p>
                 )}
               </div>
 
               {/* Username Field */}
               <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Username
+                </label>
                 <div className="relative">
                   <UserCheck
-                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
+                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
                     size={20}
                   />
                   <input
                     type="text"
                     name="username"
-                    placeholder="Username"
+                    placeholder="Choose a username"
                     value={formData.username}
                     onChange={handleInputChange}
-                    className={`w-full bg-slate-800/50 border ${
-                      errors.username ? "border-red-500" : "border-slate-600"
-                    } rounded-lg py-3 px-12 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all`}
+                    className={`w-full bg-gray-700 border ${
+                      errors.username ? "border-red-500" : "border-gray-600"
+                    } rounded-lg py-3 px-12 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all`}
                   />
                 </div>
                 {errors.username && (
-                  <p className="text-red-400 text-sm mt-1">{errors.username}</p>
+                  <p className="text-red-400 text-sm mt-2">{errors.username}</p>
                 )}
               </div>
             </>
@@ -287,26 +296,29 @@ const AuthPage = () => {
           {isLogin && (
             /* Email or Username Field for Login */
             <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Email or Username
+              </label>
               <div className="relative">
                 <User
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
                   size={20}
                 />
                 <input
                   type="text"
                   name="emailOrUsername"
-                  placeholder="Email or Username"
+                  placeholder="Enter email or username"
                   value={formData.emailOrUsername}
                   onChange={handleInputChange}
-                  className={`w-full bg-slate-800/50 border ${
+                  className={`w-full bg-gray-700 border ${
                     errors.emailOrUsername
                       ? "border-red-500"
-                      : "border-slate-600"
-                  } rounded-lg py-3 px-12 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all`}
+                      : "border-gray-600"
+                  } rounded-lg py-3 px-12 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all`}
                 />
               </div>
               {errors.emailOrUsername && (
-                <p className="text-red-400 text-sm mt-1">
+                <p className="text-red-400 text-sm mt-2">
                   {errors.emailOrUsername}
                 </p>
               )}
@@ -315,31 +327,34 @@ const AuthPage = () => {
 
           {/* Password Field */}
           <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Password
+            </label>
             <div className="relative">
               <Lock
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
                 size={20}
               />
               <input
                 type={showPassword ? "text" : "password"}
                 name="password"
-                placeholder="Password"
+                placeholder="Enter your password"
                 value={formData.password}
                 onChange={handleInputChange}
-                className={`w-full bg-slate-800/50 border ${
-                  errors.password ? "border-red-500" : "border-slate-600"
-                } rounded-lg py-3 px-12 pr-12 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all`}
+                className={`w-full bg-gray-700 border ${
+                  errors.password ? "border-red-500" : "border-gray-600"
+                } rounded-lg py-3 px-12 pr-12 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all`}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
               >
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
             {errors.password && (
-              <p className="text-red-400 text-sm mt-1">{errors.password}</p>
+              <p className="text-red-400 text-sm mt-2">{errors.password}</p>
             )}
           </div>
 
@@ -347,7 +362,7 @@ const AuthPage = () => {
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className={`w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none ${
+            className={`w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none ${
               loading ? "animate-pulse" : ""
             }`}
           >
@@ -366,11 +381,11 @@ const AuthPage = () => {
 
         {/* Switch Mode */}
         <div className="mt-6 text-center">
-          <p className="text-slate-400">
+          <p className="text-gray-400">
             {isLogin ? "Don't have an account?" : "Already have an account?"}
             <button
               onClick={switchMode}
-              className="ml-2 text-purple-400 hover:text-purple-300 font-semibold transition-colors"
+              className="ml-2 text-blue-400 hover:text-blue-300 font-semibold transition-colors"
             >
               {isLogin ? "Sign Up" : "Sign In"}
             </button>
@@ -378,9 +393,22 @@ const AuthPage = () => {
         </div>
 
         {/* Footer */}
-        <div className="mt-8 text-center text-slate-500 text-sm">
+        <div className="mt-8 text-center text-gray-500 text-sm">
           <p>
-            By continuing, you agree to our Terms of Service and Privacy Policy
+            By continuing, you agree to our{" "}
+            <a
+              href="#"
+              className="text-blue-400 hover:text-blue-300 transition-colors"
+            >
+              Terms of Service
+            </a>{" "}
+            and{" "}
+            <a
+              href="#"
+              className="text-blue-400 hover:text-blue-300 transition-colors"
+            >
+              Privacy Policy
+            </a>
           </p>
         </div>
       </div>

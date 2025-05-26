@@ -16,6 +16,7 @@ import Chat from "@/components/chat";
 import ChessBoard from "@/components/chessboard";
 import socketManager from "@/components/utils/socketManager";
 import { useToast } from "@/components/ui/toast";
+import { getUser, isAuthenticated } from "@/components/utils/authUtils"; // Update path as needed
 
 const serveruri = process.env.NEXT_PUBLIC_SERVER_API_URL;
 

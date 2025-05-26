@@ -10,7 +10,7 @@ export default function Footer() {
         <div className="flex flex-col space-y-3 md:max-w-xs">
           <div className="flex items-center space-x-3 cursor-pointer">
             <Swords className="text-primary h-10 w-10" color="#20b155" />
-            <span className="text-green-500 font-extrabold text-2xl tracking-wide">
+            <span className="text-green-500 font-extrabold text-2xl tracking-wide bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
               KnightFight
             </span>
           </div>

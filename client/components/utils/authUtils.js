@@ -1,5 +1,5 @@
 // authUtils.js - Frontend utility functions for authentication
-
+const serveruri = process.env.NEXT_PUBLIC_SERVER_API_URL;
 export const AUTH_STORAGE_KEY = "chess_token";
 export const USER_STORAGE_KEY = "chess_user";
 
@@ -84,29 +84,50 @@ export const authenticatedFetch = async (url, options = {}) => {
 export const updateUserStats = async (gameResult) => {
   try {
     const user = getUser();
-    if (!user) return;
+    if (!user || !user.id) {
+      console.log("No authenticated user found, skipping stats update");
+      return null;
+    }
 
     const updatedStats = {
-      total_games: user.total_games + 1,
-      wins: user.wins + (gameResult === "win" ? 1 : 0),
-      losses: user.losses + (gameResult === "loss" ? 1 : 0),
-      draws: user.draws + (gameResult === "draw" ? 1 : 0),
+      total_games: (user.total_games || 0) + 1,
+      wins: (user.wins || 0) + (gameResult === "win" ? 1 : 0),
+      losses: (user.losses || 0) + (gameResult === "loss" ? 1 : 0),
+      draws: (user.draws || 0) + (gameResult === "draw" ? 1 : 0),
     };
 
-    const response = await authenticatedFetch("/api/auth/users/stats", {
-      method: "PUT",
-      body: JSON.stringify(updatedStats),
-    });
+    console.log("Updating stats for user:", user.username, updatedStats);
+
+    const response = await authenticatedFetch(
+      serveruri + "/api/auth/users/stats",
+      {
+        method: "PUT",
+        body: JSON.stringify(updatedStats),
+      }
+    );
 
     if (response.ok) {
       const data = await response.json();
       // Update localStorage with new stats
       const updatedUser = { ...user, ...data.user };
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updatedUser));
+      console.log("Stats updated successfully:", updatedUser);
       return updatedUser;
+    } else {
+      console.error(
+        "Failed to update stats:",
+        response.status,
+        response.statusText
+      );
+      return null;
     }
   } catch (error) {
     console.error("Error updating user stats:", error);
+    if (error.message.includes("Authentication expired")) {
+      // Handle auth expiry gracefully
+      console.log("Authentication expired, user will need to log in again");
+    }
+    return null;
   }
 };
 
@@ -114,7 +135,7 @@ export const updateUserStats = async (gameResult) => {
 export const logout = async () => {
   try {
     // Call logout endpoint if needed
-    await authenticatedFetch("/api/auth/logout", {
+    await authenticatedFetch(serveruri + "/api/auth/logout", {
       method: "POST",
     });
   } catch (error) {
@@ -142,7 +163,7 @@ export const isTokenExpired = (token) => {
 // Refresh user data from server
 export const refreshUserData = async () => {
   try {
-    const response = await authenticatedFetch("/api/auth/me");
+    const response = await authenticatedFetch(serveruri + "/api/auth/me");
     if (response.ok) {
       const data = await response.json();
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
