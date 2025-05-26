@@ -9,7 +9,10 @@ A modern, full-stack, real-time multiplayer **chess platform** that supports pla
 
 ## 🎯 Features
 
-- ✅ **Guest Play Only** – Jump into the game instantly without signing in
+- ✅ **Guest Play** – Jump into the game instantly without signing in
+- 🔐 **Authentication** – Secure Sign In/Sign Up with JWT-based authentication
+- 👤 **User Profiles** – View your game history, statistics, and preferences
+- 🧑‍💼 **Admin Dashboard** – Manage all users, games, and data securely
 - ♟️ **Play with Computer** – Choose difficulty: Easy, Medium, Hard, or Random
 - 🆚 **Multiplayer Matchmaking** – Create & share a game link to invite a friend
 - 👀 **Spectator Mode** – Let others watch your live game in real-time
@@ -29,7 +32,7 @@ A modern, full-stack, real-time multiplayer **chess platform** that supports pla
 - [Next.js 15](https://nextjs.org/)
 - [React](https://reactjs.org/)
 - [Tailwind CSS](https://tailwindcss.com/)
-- [chessboardjsx](https://github.com/willb335/chessboardjsx)
+- [react-chessboard](https://www.npmjs.com/package/react-chessboard)
 - [chess.js](https://github.com/jhlywa/chess.js)
 
 ### Backend
@@ -38,7 +41,7 @@ A modern, full-stack, real-time multiplayer **chess platform** that supports pla
 - [Express](https://expressjs.com/)
 - [Socket.IO](https://socket.io/)
 - [PostgreSQL](https://www.postgresql.org/)
-- [Sequelize](https://sequelize.org/)
+- [JsonWebToken](https://jwt.io/)
 
 ---
 
@@ -53,6 +56,14 @@ cd knightfight
 
 ### 2. Install dependencies
 
+**Frontend (`client/`):**
+
+```bash
+npm install
+```
+
+**Backend (`server/`):**
+
 ```bash
 npm install
 ```
@@ -60,23 +71,15 @@ npm install
 ### 3. Setup environment variables
 
 Create a `.env.local` file in the root directory for the frontend, and a `.env` file in the `server/` directory.
+Look for `.env.example` for guide in both directory.
 
 **Frontend (`.env.local`):**
 
-```env
-NEXT_PUBLIC_SERVER_URL=https://knightfight-server.onrender.com
-```
-
 **Backend (`server/.env`):**
-
-```env
-DATABASE_URL=your_postgres_connection_string
-PORT=4000
-```
 
 ### 4. Run the development servers
 
-#### Frontend:
+#### Frontend (from `client/` folder):
 
 ```bash
 npm run dev
@@ -96,12 +99,16 @@ npm run dev
 
 ```
 knightfight/
-├── app/                 # Next.js app directory
-├── components/          # React components
-├── public/              # Static assets
-├── server/              # Express backend with PostgreSQL
-├── styles/              # Tailwind and global styles
-├── utils/               # Utilities and helpers
+├──Client
+      ├── app/                 # Next.js app directory
+      ├── components/          # React components
+      ├── public/              # Static assets
+
+      ├── styles/              # Tailwind and global styles
+      ├── utils/               # Utilities and helpers
+├──Server
+      ├── server             # Express backend with PostgreSQL (main Server)
+      ├── auth             # Express backend with PostgreSQL (Authentication)
 └── README.md
 ```
 
@@ -109,11 +116,11 @@ knightfight/
 
 ## 📌 Roadmap
 
-- [ ] Authentication system (Login/Register)
+- [✔] Authentication system (Login/Register)
 - [ ] Player stats, ranking & ELO
 - [ ] Game replay and analysis
 - [ ] Voice chat during matches
-- [ ] Admin dashboard for moderation
+- [✔] Admin dashboard for moderation
 - [ ] Tournaments and leaderboard
 
 ---
@@ -123,12 +130,12 @@ knightfight/
 Here are some preview screenshots of **KnightFight**:
 
 <p align="center">
-  <img src="./assets/preview1.png" width="200" alt="Preview 1"/>
-  <img src="./assets/preview2.png" width="200" alt="Preview 2"/>
+  <img src="./assets/preview1.png" width="400" alt="Preview 1"/>
+  <img src="./assets/preview2.png" width="400" alt="Preview 2"/>
 </p>
 <p align="center">
-  <img src="./assets/preview3.png" width="200" alt="Preview 3"/>
-  <img src="./assets/preview4.png" width="200" alt="Preview 4"/>
+  <img src="./assets/preview3.png" width="400" alt="Preview 3"/>
+  <img src="./assets/preview4.png" width="400" alt="Preview 4"/>
 </p>
 ---
 ## 🤝 Contributing
