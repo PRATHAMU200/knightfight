@@ -66,6 +66,7 @@ export const authenticatedFetch = async (url, options = {}) => {
       ...defaultHeaders,
       ...options.headers,
     },
+    credentials: "include",
   };
 
   const response = await fetch(url, config);
